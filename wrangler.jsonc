@@ -27,7 +27,7 @@
 	 * Environment Variables
 	 * https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
 	 */
-	"vars": { "NODE_VERSION": "22.14.0",  "PNPM_VERSION": "10.6.5"},
+	// "vars": { "NODE_VERSION": "22.14.0",  "PNPM_VERSION": "10.6.5"},
 	/**
 	 * Note: Use secrets to store sensitive data.
 	 * https://developers.cloudflare.com/workers/configuration/secrets/
