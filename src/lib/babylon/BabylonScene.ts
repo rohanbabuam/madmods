@@ -3,7 +3,7 @@ import HavokPhysics from "@babylonjs/havok";
 import '@babylonjs/loaders/glTF';
 
 export const init = async() => {
-    console.log("babylon init");
+    //console.log("babylon init");
 
     let canvas:any = document.getElementById('BabylonCanvas');
 
@@ -13,10 +13,43 @@ export const init = async() => {
         // This creates a basic Babylon Scene object (non-mesh)
         let scene:any = new BABYLON.Scene(engine);
     
-        // This creates and positions a free camera (non-mesh)
-        let camera:any = new BABYLON.UniversalCamera("camera1", new BABYLON.Vector3(0, 5, -5), scene);
-        //let camera:any = new BABYLON.arcFollowCamera("camera1", -Math.PI / 2, Math.PI / 3.5, 25, new BABYLON.Vector3(0, 0, 0));
+        //This creates and positions a free camera (non-mesh)
+        //let camera:any = new BABYLON.UniversalCamera("camera1", new BABYLON.Vector3(0, 5, -5), scene);
+        let camera:any = new BABYLON.ArcRotateCamera("camera1", -Math.PI / 2, Math.PI / 2.5, 25, new BABYLON.Vector3(0, 0, 0));
+        scene.activeCamera = camera;
+        scene.activeCamera.attachControl(canvas, true);
+        camera.lowerRadiusLimit = 10;
+        camera.upperRadiusLimit = 20;
+        camera.wheelDeltaPercentage = 0.01;
+
+        // Parameters: name, position, scene
+        // const camera = new BABYLON.FollowCamera("FollowCam", new BABYLON.Vector3(0, 10, -10), scene);
+
+        // // The goal distance of camera from target
+        // camera.radius = 12;
+
+        // camera.lowerRadiusLimit = 8;
+        // camera.upperRadiusLimit = 12
         
+
+        // // The goal height of camera above local origin (centre) of target
+        // camera.heightOffset = 4;
+        // camera.lowerHeightOffsetLimit = 4;
+        // camera.upperHeightOffsetLimit = 8;
+
+        // // The goal rotation of camera around local origin (centre) of target in x y plane
+        // camera.rotationOffset = 0;
+
+        // // Acceleration of camera in moving from current to goal position
+        // camera.cameraAcceleration = 0.01;
+
+        // // The speed at which acceleration is halted
+        // camera.maxCameraSpeed = 10;
+
+        // // This attaches the camera to the canvas
+        // scene.activeCamera = camera;
+        // scene.activeCamera.attachControl(canvas, true);
+        ///camera.attachControl(canvas, true);
         
     
         // This creates a light, aiming 0,1,0 - to the sky (non-mesh)
@@ -69,7 +102,7 @@ export const init = async() => {
                     mesh.name.includes('bridge') ||
                     mesh.name.includes('foundation')
                 ){
-                    console.log(mesh.name);
+                    //console.log(mesh.name);
                     new BABYLON.PhysicsAggregate(mesh, BABYLON.PhysicsShapeType.MESH);
                     mesh.isPickable = false;  
                     // mesh.material.lightmapTexture = lightmap;
@@ -132,7 +165,7 @@ export const init = async() => {
             let characterGravity = new BABYLON.Vector3(0, -18, 0);
     
             // Physics shape for the character
-            let h = 1.8;
+            let h = 1.2;
             let r = 0.6;
             //let displayCapsule:any = BABYLON.MeshBuilder.CreateCapsule("CharacterDisplay", {height: h, radius: r}, scene);
             let hero:any, idleAnim:any, runAnim:any, jumpAnim:any;
@@ -140,24 +173,30 @@ export const init = async() => {
             let characterURL = "https://pub-48572794ea984ea9976e5d5856e58593.r2.dev/static/characters/Timmy5.glb";
             await BABYLON.ImportMeshAsync(characterURL, scene).then((character:any)=>{
                 
-                console.log(character);
+                //console.log(character);
                 hero = character.meshes[0];
+                // let camFocusMesh = BABYLON.MeshBuilder.CreateBox("camFocusBox", { size: 0.5 }, scene);
+                // camFocusMesh.parent = hero;
+                // camFocusMesh.position.z = 8;
+                
+                //Lock camera on the character 
+                camera.lockedTarget = hero;
                 
                 //animations
                 idleAnim = scene.getAnimationGroupByName("idle");
                 runAnim = scene.getAnimationGroupByName("run");
                 jumpAnim = scene.getAnimationGroupByName("jump");
 
-                console.log(idleAnim)
+                //console.log(idleAnim)
                 //idleAnim.weight = 1;
                 //idleAnim.play(true);
             });
             
 
-
-            let characterPosition = new BABYLON.Vector3(3., 0.3, -8.);
+            ////37.69171118982338, _y: -1.5508091676823659, _z: -41.486900655615486
+            let characterPosition = new BABYLON.Vector3(26, 1, -92);
             let characterController = new BABYLON.PhysicsCharacterController(characterPosition, {capsuleHeight: h, capsuleRadius: r}, scene);
-            camera.setTarget(characterPosition);
+            //camera.setTarget(characterPosition);
     
             // State handling
             // depending on character state and support, set the new state
@@ -174,7 +213,7 @@ export const init = async() => {
                     }
     
                     if (wantJump) {
-                        jumpAnim.start(true, 1.0, runAnim.from, runAnim.to, false);
+                        jumpAnim.start(true, 1.0, jumpAnim.from, jumpAnim.to, false);
                         return "START_JUMP";
                     }
                     return "ON_GROUND";
@@ -195,7 +234,7 @@ export const init = async() => {
                 upWorld.scaleInPlace(-1.0);
                 let forwardWorld = forwardLocalSpace.applyRotationQuaternion(characterOrientation);
                 if (state == "IN_AIR") {
-                    let desiredVelocity = inputDirection.scale(inAirSpeed).applyRotationQuaternion(characterOrientation);
+                    let desiredVelocity = inputDirection.scale(inAirSpeed)//.applyRotationQuaternion(characterOrientation);
                     let outputVelocity = characterController.calculateMovement(deltaTime, forwardWorld, upWorld, currentVelocity, BABYLON.Vector3.ZeroReadOnly, desiredVelocity, upWorld);
                     // Restore to original vertical component
                     outputVelocity.addInPlace(upWorld.scale(-outputVelocity.dot(upWorld)));
@@ -207,26 +246,28 @@ export const init = async() => {
                     // Move character relative to the surface we're standing on
                     // Correct input velocity to apply instantly any changes in the velocity of the standing surface and this way
                     // avoid artifacts caused by filtering of the output velocity when standing on moving objects.
-                    let desiredVelocity = inputDirection.scale(onGroundSpeed).applyRotationQuaternion(characterOrientation);
+                    let desiredVelocity = inputDirection.scale(onGroundSpeed)//.applyRotationQuaternion(characterOrientation);
     
                     let outputVelocity = characterController.calculateMovement(deltaTime, forwardWorld, supportInfo.averageSurfaceNormal, currentVelocity, supportInfo.averageSurfaceVelocity, desiredVelocity, upWorld);
+                    //console.log('before projection = ', outputVelocity)
                     // Horizontal projection
                     {
-                        // outputVelocity.subtractInPlace(supportInfo.averageSurfaceVelocity);
-                        // let inv1k = 1e-3;
-                        // if (outputVelocity.dot(upWorld) > inv1k) {
-                        //     let velLen = outputVelocity.length();
-                        //     outputVelocity.normalizeFromLength(velLen);
+                        outputVelocity.subtractInPlace(supportInfo.averageSurfaceVelocity);
+                        let inv1k = 1e-3;
+                        if (outputVelocity.dot(upWorld) > inv1k) {
+                            let velLen = outputVelocity.length();
+                            outputVelocity.normalizeFromLength(velLen);
     
-                        //     // Get the desired length in the horizontal direction
-                        //     let horizLen = velLen / supportInfo.averageSurfaceNormal.dot(upWorld);
+                            // Get the desired length in the horizontal direction
+                            let horizLen = velLen / supportInfo.averageSurfaceNormal.dot(upWorld);
     
-                        //     // Re project the velocity onto the horizontal plane
-                        //     let c = supportInfo.averageSurfaceNormal.cross(outputVelocity);
-                        //     outputVelocity = c.cross(upWorld);
-                        //     outputVelocity.scaleInPlace(horizLen);
-                        // }
-                        // outputVelocity.addInPlace(supportInfo.averageSurfaceVelocity);
+                            // Re project the velocity onto the horizontal plane
+                            let c = supportInfo.averageSurfaceNormal.cross(outputVelocity);
+                            outputVelocity = c.cross(upWorld);
+                            outputVelocity.scaleInPlace(horizLen);
+                        }
+                        outputVelocity.addInPlace(supportInfo.averageSurfaceVelocity);
+                        //console.log('after projection = ', outputVelocity)
                         return outputVelocity;
                     }
                 } else if (state == "START_JUMP") {
@@ -238,80 +279,85 @@ export const init = async() => {
             }
             
 
-            var heroSpeed = 0.03;
-            var heroSpeedBackwards = 0.01;
+
             var heroRotationSpeed = 0.1;
             var animating = true;
             // Display tick update: compute new camera position/target, update the capsule for the character display
             scene.onBeforeRenderObservable.add((scene:any) => {
-                // var keydown = false;
-                // //Manage the movements of the character (e.g. position, direction)
-                // if (inputMap["w"]) {
-                //     inputDirection = hero.forward.normalize();
-                //     //hero.moveWithCollisions(hero.forward.scaleInPlace(heroSpeed));
-                //     keydown = true;
-                // }
-                // if (inputMap["s"]) {
-                //     inputDirection = hero.forward.normalize().negate();
-                //     //hero.moveWithCollisions(hero.forward.scaleInPlace(-heroSpeedBackwards));
-                //     keydown = true;
-                // }
-                // if (inputMap["a"]) {
-                //     //inputDirection.x = 0;
-                //     hero.rotate(BABYLON.Vector3.Up(), -heroRotationSpeed);
-                //     keydown = true;
-                // }
-                // if (inputMap["d"]) {
-                //     //inputDirection.x = 0;
-                //     hero.rotate(BABYLON.Vector3.Up(), heroRotationSpeed);
-                //     keydown = true;
-                // }
-                // if (inputMap[" "]) {
-                //     wantJump  = true;
-                //     keydown = true;
-                // }
+                var keydown = false;
+                //Manage the movements of the character (e.g. position, direction)
+                if (inputMap["w"]) {
+                    inputDirection = hero.forward;
+                    keydown = true;
+                }
+                if (inputMap["s"]) {
+                    inputDirection = hero.forward.negate();
+                    keydown = true;
+                }
+                if (inputMap["a"]) {
+                    //inputDirection.x = 0;
+                    hero.rotate(BABYLON.Vector3.Up(), -heroRotationSpeed);
+                    keydown = true;
+                }
+                if (inputMap["d"]) {
+                    //inputDirection.x = 0;
+                    hero.rotate(BABYLON.Vector3.Up(), heroRotationSpeed);
+                    keydown = true;
+                }
+                if (inputMap[" "]) {
+                    //wantJump  = true;
+                    keydown = true;
+                }
 
-                // //Manage animations to be played  
-                // if (keydown) {
-                //     if (!animating) {
-                //         animating = true;
-                //         if (inputMap["w"] || inputMap["s"]) {
-                //             //Walk backwards
-                //             runAnim.start(true, 1.0, runAnim.from, runAnim.to, false);
-                //         }
-                //         else if (inputMap[" "]){
-                //             //jump
-                //         }
-                //     }
-                // }
-                // else {
-                //     inputDirection.z = 0;
-                //     inputDirection.x = 0;
-                //     wantJump = false;
+                //Manage animations to be played  
+                if (keydown) {
+                    if (!animating) {
+                        
+                        if (inputMap["w"] || inputMap["s"]) {
+                            //run
+                            animating = true;
+                            runAnim.start(true, 1.5, runAnim.from, runAnim.to, false);
+                        }
+                        else if (inputMap["a"]){
+                            //left rotate
+                            
+                        }
+                        else if (inputMap["d"]){
+                            //right rotate
+                            
+                        }
+                    }
+                }
+                else {
+                    inputDirection.scaleInPlace(0);
+                    //wantJump = false;
+                    if (animating) {
+                        //Default animation is idle when no key is down     
+                        idleAnim.start(true, 1.0, idleAnim.from, idleAnim.to, false);
 
-                //     if (animating) {
-                //         //Default animation is idle when no key is down     
-                //         idleAnim.start(true, 1.0, idleAnim.from, idleAnim.to, false);
+                        //Stop all animations besides Idle Anim when no key is down
+                        runAnim.stop();
+                        //jumpAnim.stop();
 
-                //         //Stop all animations besides Idle Anim when no key is down
-                //         runAnim.stop();
-                //         //jumpAnim.stop();
-
-                //         //Ensure animation are played only once per rendering loop
-                //         animating = false;
-                //     }
-                // }
+                        //Ensure animation are played only once per rendering loop
+                        animating = false;
+                    }
+                }
                 hero.position.copyFrom(characterController.getPosition());
+                hero.position.y -= 0.75;
+                if (isMouseDown) {
+                    console.log(hero.position)
+                }
     
                 // camera following
-                var cameraDirection = camera.getDirection(new BABYLON.Vector3(0,0,1));
-                cameraDirection.y = 0;
-                cameraDirection.normalize();
-                camera.setTarget(BABYLON.Vector3.Lerp(camera.getTarget(), hero.position, 0.1));
-                var dist = BABYLON.Vector3.Distance(camera.position, hero.position);
-                const amount = (Math.min(dist - 6, 0) + Math.max(dist - 9, 0)) * 0.04;
-                cameraDirection.scaleAndAddToRef(amount, camera.position);
-                camera.position.y += (hero.position.y + 2 - camera.position.y) * 0.04;
+                // var cameraDirection = camera.getDirection(new BABYLON.Vector3(0,0,1));
+                // cameraDirection.y = 0;
+                // cameraDirection.normalize();
+                // camera.setTarget(BABYLON.Vector3.Lerp(camera.getTarget(), hero.position, 0.8));
+                // var dist = BABYLON.Vector3.Distance(camera.position, hero.position);
+                // const amount = (Math.min(dist - 6, 0) + Math.max(dist - 9, 0)) * 0.04;
+                // cameraDirection.scaleAndAddToRef(amount, camera.position);
+                // camera.position.y += (hero.position.y + 2 - camera.position.y) * 0.04;
             });
     
             // After physics update, compute and set new velocity, update the character controller state
@@ -325,8 +371,12 @@ export const init = async() => {
     
                 BABYLON.Quaternion.FromEulerAnglesToRef(0,camera.rotation.y, 0, characterOrientation);
                 let desiredLinearVelocity = getDesiredVelocity(dt, support, characterOrientation, characterController.getVelocity());
-                characterController.setVelocity(desiredLinearVelocity);
-    
+                
+                if (inputDirection.z === 0 && inputDirection.x === 0 && state === "ON_GROUND") {       
+                    characterController.setVelocity(BABYLON.Vector3.Zero());
+                }else{      
+                    characterController.setVelocity(desiredLinearVelocity);
+                }
                 characterController.integrate(dt, support, characterGravity);
             });
     
@@ -345,9 +395,10 @@ export const init = async() => {
     
                     case BABYLON.PointerEventTypes.POINTERMOVE:
                         if (isMouseDown) {
-                            var tgt = camera.getTarget().clone();
-                            camera.position.addInPlace(camera.getDirection(BABYLON.Vector3.Right()).scale(pointerInfo.event.movementX * -0.02));
-                            camera.setTarget(tgt);
+                            
+                            // var tgt = camera.getTarget().clone();
+                            // camera.position.addInPlace(camera.getDirection(BABYLON.Vector3.Right()).scale(pointerInfo.event.movementX * -0.02));
+                            // camera.setTarget(tgt);
                         }
                         break;
                 }
@@ -358,23 +409,26 @@ export const init = async() => {
                 switch (kbInfo.type) {
                     case BABYLON.KeyboardEventTypes.KEYDOWN:
                         if (kbInfo.event.key == 'w' || kbInfo.event.key == 'ArrowUp') {
-                            inputDirection.z = 1;
+                            //inputDirection = hero.forward;
                         } else if (kbInfo.event.key == 's' || kbInfo.event.key == 'ArrowDown') {
-                            inputDirection.z = -1;
+                            //inputDirection = hero.forward.negate();
                         } else if (kbInfo.event.key == 'a' || kbInfo.event.key == 'ArrowLeft') {
-                            inputDirection.x = -1;
+                            //hero.rotate(BABYLON.Vector3.Up(), -heroRotationSpeed);
+                            //inputDirection.x = -1;
                         } else if (kbInfo.event.key == 'd' || kbInfo.event.key == 'ArrowRight') {
-                            inputDirection.x = 1;
+                            //inputDirection.x = 1;
+                            //hero.rotate(BABYLON.Vector3.Up(), heroRotationSpeed);
                         } else if (kbInfo.event.key == ' ') {
                             wantJump = true;
                         }
                         break;
                     case BABYLON.KeyboardEventTypes.KEYUP:
                         if (kbInfo.event.key == 'w' || kbInfo.event.key == 's' || kbInfo.event.key == 'ArrowUp' || kbInfo.event.key == 'ArrowDown') {
-                            inputDirection.z = 0;    
+                            //inputDirection.z = 0;
+                            //console.log('w released')    
                         }
                         if (kbInfo.event.key == 'a' || kbInfo.event.key == 'd' || kbInfo.event.key == 'ArrowLeft' || kbInfo.event.key == 'ArrowRight') {
-                            inputDirection.x = 0;
+                            //inputDirection.x = 0;
                         } else if (kbInfo.event.key == ' ') {
                             wantJump = false;
                         }
