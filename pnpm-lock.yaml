@@ -11,6 +11,9 @@ dependencies:
   '@babylonjs/core':
     specifier: ^8.0.1
     version: 8.0.1
+  '@babylonjs/gui':
+    specifier: ^8.0.1
+    version: 8.0.1(@babylonjs/core@8.0.1)
   '@babylonjs/havok':
     specifier: ^1.3.10
     version: 1.3.10
@@ -18,6 +21,9 @@ dependencies:
     specifier: ^8.0.1
     version: 8.0.1(@babylonjs/core@8.0.1)(babylonjs-gltf2interface@8.0.1)
   '@babylonjs/materials':
+    specifier: ^8.0.1
+    version: 8.0.1(@babylonjs/core@8.0.1)
+  '@babylonjs/post-processes':
     specifier: ^8.0.1
     version: 8.0.1(@babylonjs/core@8.0.1)
   three:
@@ -165,6 +171,14 @@ packages:
     resolution: {integrity: sha512-00XJJgKJSLPY9eOE4MPZWqSxtifZS0oiKZyHKmybnXdYDtXCmh4ehyL2vguaE8MP1lqQEJ7RTC7gqP7ru/7vjw==}
     dev: false
 
+  /@babylonjs/gui@8.0.1(@babylonjs/core@8.0.1):
+    resolution: {integrity: sha512-716OQHg4h9lebh0N/XT41dBgmh763FCRd6tWhQAnPv1gFfMmI8MksT+bT/nK8wREmnLruNGu3s/1i0YvlUkBxQ==}
+    peerDependencies:
+      '@babylonjs/core': ^8.0.0
+    dependencies:
+      '@babylonjs/core': 8.0.1
+    dev: false
+
   /@babylonjs/havok@1.3.10:
     resolution: {integrity: sha512-ddF0LPBVmg+rmPaMmwTPA9FcHyUnrSsQqFoBbYbN51WMhEJQ+7gRFW3J5lML6lN9M/fbknh6bh1ZirZ2bU2B/w==}
     dependencies:
@@ -183,6 +197,14 @@ packages:
 
   /@babylonjs/materials@8.0.1(@babylonjs/core@8.0.1):
     resolution: {integrity: sha512-UD43a6x4sXQk71l8XEm1zbSDD/DSwY1P/pzpJa2acZw2tqTJgRvrXQ29Ij2jX0CFn5S/Gnw8vmq0czfZhJ8PzA==}
+    peerDependencies:
+      '@babylonjs/core': ^8.0.0
+    dependencies:
+      '@babylonjs/core': 8.0.1
+    dev: false
+
+  /@babylonjs/post-processes@8.0.1(@babylonjs/core@8.0.1):
+    resolution: {integrity: sha512-N3lNTOipjhKC7m3gZ3TJ+2qt8v9tOsntKBNEERabzmiezPHvdtZvBqNLyHUvxqYqM53lUY87mpWjaCKyw/ovzQ==}
     peerDependencies:
       '@babylonjs/core': ^8.0.0
     dependencies:

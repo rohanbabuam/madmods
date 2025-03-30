@@ -1,6 +1,7 @@
 import * as BABYLON from '@babylonjs/core/Legacy/legacy';
 import HavokPhysics from "@babylonjs/havok";
-import '@babylonjs/loaders/glTF';
+import '@babylonjs/loaders/glTF'; 
+import * as GUI from '@babylonjs/gui'
 
 export const init = async() => {
     //console.log("babylon init");
@@ -175,6 +176,28 @@ export const init = async() => {
                 
                 //console.log(character);
                 hero = character.meshes[0];
+
+                // GUI
+                var advancedTexture = GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI");
+
+                var rect1 = new GUI.Rectangle();
+                rect1.width = 0.2;
+                rect1.height = 0.04;
+                rect1.cornerRadius = 10;
+                rect1.color = "rgba(0,0,0,0.3)";
+                rect1.thickness = 2;
+                rect1.background = "rgba(255,255,255,0.75)";
+                rect1.verticalAlignment = GUI.Control.VERTICAL_ALIGNMENT_CENTER;
+                advancedTexture.addControl(rect1);
+
+                var label = new GUI.TextBlock();
+                label.text = "Sphere";
+                label.color = "rgba(0,0,0,0.75)"
+                rect1.addControl(label);
+
+                rect1.linkWithMesh(hero);   
+                rect1.linkOffsetY = -150;
+
                 // let camFocusMesh = BABYLON.MeshBuilder.CreateBox("camFocusBox", { size: 0.5 }, scene);
                 // camFocusMesh.parent = hero;
                 // camFocusMesh.position.z = 8;
