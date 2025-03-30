@@ -9,7 +9,9 @@ import {
     EquirectangularReflectionMapping,
     PerspectiveCamera,
     Scene,
-    WebGLRenderer
+    WebGLRenderer,
+    MeshStandardMaterial,
+    Color
 } from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
@@ -17,52 +19,9 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 import { CSM } from 'three/addons/csm/CSM.js';
 import { Water } from 'three/addons/objects/Water2.js';
+import * as  TWEEN  from 'three/addons/libs/tween.module.js';
 import("three-mesh-bvh");
-  
-// let scene:Scene, camera:PerspectiveCamera, renderer:WebGLRenderer;
-// let cube:Mesh;
-  
-//   const animate = () => {
-//       requestAnimationFrame(animate);
-//       cube.rotation.x += 0.01;
-//       cube.rotation.y += 0.01;
-//       renderer.render(scene, camera);
-//   };
-  
-//   const resize = () => {
-//       renderer.setSize(window.innerWidth, window.innerHeight);
-//       camera.aspect = window.innerWidth / window.innerHeight;
-//       camera.updateProjectionMatrix();
-//   };
-  
-//   export const createScene = (el:HTMLCanvasElement) => {
-//     scene = new Scene();
-  
-//     camera = new PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-//     camera.position.z = 5;
-    
-//     const geometry = new BoxGeometry();
-    
-//     const material = new MeshStandardMaterial({
-//         color: 0x00ff00,
-//         metalness: 0.13
-//     });
-    
-//     cube = new Mesh(geometry, material);
-//     scene.add(cube);
-    
-//     const directionalLight = new DirectionalLight(0x9090aa);
-//     directionalLight.position.set(-10, 10, -10).normalize();
-//     scene.add(directionalLight);
-    
-//     const hemisphereLight = new HemisphereLight(0xffffff, 0x444444);
-//     hemisphereLight.position.set(1, 1, 1);
-//     scene.add(hemisphereLight);
-    
-//     renderer = new WebGLRenderer({ antialias: true, canvas: el });
-//     resize();
-//     animate();
-//   };
+import CustomShaderMaterial from "three-custom-shader-material/vanilla";
   //CONFIG
   let dev: boolean;
 
@@ -106,8 +65,81 @@ import("three-mesh-bvh");
     });
 
 
+    const CustomMaterial = new CustomShaderMaterial({
+        baseMaterial: MeshStandardMaterial,
+        // Your Uniforms
+        uniforms: {
+            translationX:  { value: 0.0 },
+            translationY:  {  value: 0.0 },
+            translationZ:  { value: 0.0 },
+            scaleX:  { value: 1.0 },
+            scaleY:  { value: 1.0 },
+            scaleZ:  { value: 1.0 },
+            rotationX:  { value: 0.0 },
+            rotationY:  { value: 0.0 },
+            rotationZ:  { value: 0.0},
+            uTime: { value: 1.0 }
+            
+        },
+        vertexShader: /* glsl */ ` 
+        uniform float translationX;
+        uniform float translationY;
+        uniform float translationZ;
+        uniform float scaleX;
+        uniform float scaleY;
+        uniform float scaleZ;
+        uniform float rotationX;
+        uniform float rotationY;
+        uniform float rotationZ;
+        uniform float uTime;
+        
 
+        varying vec2 vUv;
+        varying mat4 vPosition;
 
+        void main() {
+
+            vUv = uv;
+            
+            // Translate
+            mat4 tPos = mat4(vec4(1.0,0.0,0.0,0.0),
+                            vec4(0.0,1.0,0.0,0.0),
+                            vec4(0.0,0.0,1.0,0.0),
+                            vec4(translationX,translationY,translationZ,1.0));
+            
+            // Rotate
+            mat4 rXPos = mat4(vec4(1.0,0.0,0.0,0.0),
+                                vec4(0.0,cos(rotationX),-sin(rotationX),0.0),
+                                vec4(0.0,sin(rotationX),cos(rotationX),0.0),
+                                vec4(0.0,0.0,0.0,1.0));
+            
+            mat4 rYPos = mat4(vec4(cos(rotationY),0.0,sin(rotationY),0.0),
+                                vec4(0.0,1.0,0.0,0.0),
+                                vec4(-sin(rotationY),0.0,cos(rotationY),0.0),
+                                vec4(0.0,0.0,0.0,1.0));
+            
+            mat4 rZPos = mat4(vec4(cos(rotationZ),-sin(rotationZ),0.0,0.0),
+                                vec4(sin(rotationZ),cos(rotationZ),0.0,0.0),
+                                vec4(0.0,0.0,1.0,0.0),
+                                vec4(0.0,0.0,0.0,1.0));
+                                
+            // Scale
+            mat4 sPos = mat4(vec4(scaleX,0.0,0.0,0.0),
+                            vec4(0.0,scaleZ,0.0,0.0),
+                            vec4(0.0,0.0,mix(0.0,scaleY,uTime),0.0),
+                            vec4(0.0,0.0,0.0,1.0));
+            
+            vPosition =  tPos * rXPos * rZPos * rYPos * sPos;
+
+            csm_Position = (vPosition * vec4(position,1.0)).xyz;
+        }
+      `, // Your vertex Shader
+        //fragmentShader: /* glsl */ ` ... `, // Your fragment Shader
+        // Base material properties
+        flatShading: true,
+        //color: 0xff00ff
+    });
+    
     // Create GLTF loader
     const gltfLoader = new GLTFLoader();
 
@@ -133,8 +165,12 @@ import("three-mesh-bvh");
             console.log(model)
 
             // Optional: Enable shadows
-            model.traverse((child) => {
-                if ((child as Mesh).isMesh) {
+            model.traverse((obj) => {
+                let child = (obj as Mesh)
+                if (child.isMesh) {
+                    CustomMaterial.map = child.material.map
+                    child.material = CustomMaterial;
+
                     if(child.name.includes("hill") ||
                        child.name.includes("Road") || 
                        child.name.includes("stones") ||
@@ -142,6 +178,7 @@ import("three-mesh-bvh");
                        child.name.includes("rock")){
                         child.receiveShadow = true;
                         child.castShadow = false;
+                        //child.material.color = new Color( 0xff00ff );
                     }
                     else if(child.name.includes("water")){
                         child.visible = false;
@@ -181,6 +218,21 @@ import("three-mesh-bvh");
         }
         
     );
+
+    // new TWEEN.Tween(CustomMaterial.uniforms.uTime)
+    //     .to( {value: 0.0} , 1000)
+    //     .yoyo(true)
+    //     .repeat(Infinity)
+    //     .easing(TWEEN.Easing.Cubic.InOut)
+    //     .start()
+    // ;
+    // new TWEEN.Tween(CustomMaterial.uniforms.rotationZ)
+    //     .to( {value: 0} , 1000)
+    //     .yoyo(true)
+    //     .repeat(Infinity)
+    //     .easing(TWEEN.Easing.Cubic.InOut)
+    //     .start()
+    // ;
 
     // ☁️ Skybox (Gradient Background)
 // const skyTexture = new THREE.CanvasTexture(createGradientSky());
@@ -265,6 +317,7 @@ import("three-mesh-bvh");
         requestAnimationFrame(animate);
         csm.update();
         controls.update(); // Required for damping to work
+        TWEEN.update();
         renderer.render(scene, camera);
     }
     animate();
