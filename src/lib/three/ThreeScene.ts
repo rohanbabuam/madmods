@@ -6,14 +6,26 @@ import {
     ACESFilmicToneMapping,
     PCFSoftShadowMap,
     PlaneGeometry,
+    CircleGeometry,
     EquirectangularReflectionMapping,
     PerspectiveCamera,
     Scene,
     WebGLRenderer,
     MeshStandardMaterial,
     Color,
-    FogExp2
+    FogExp2,
+    Fog,
+    BufferGeometry,
+    CatmullRomCurve3,
+    LineBasicMaterial,
+    Line,
+    TextureLoader,
+    SRGBColorSpace,
+    LinearMipMapLinearFilter,
+    ShaderMaterial,
+    Object3D,
 } from 'three';
+import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
@@ -21,10 +33,16 @@ import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 import { CSM } from 'three/addons/csm/CSM.js';
 import { Water } from 'three/addons/objects/Water2.js';
 import * as  TWEEN  from 'three/addons/libs/tween.module.js';
+import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
 import("three-mesh-bvh");
 import CustomShaderMaterial from "three-custom-shader-material/vanilla";
+import AutoTyping from '$lib/typewriter/auto.js';
   //CONFIG
   let dev: boolean;
+  let camPath:any;
+  let planesMeshA:any;
+  let animatingText:boolean = false, animatingCamera:boolean = false, animatingMesh:boolean = false; 
+  let water:any;
 
   export const init = async() => {
     if (window.location.port === "") {
@@ -32,6 +50,36 @@ import CustomShaderMaterial from "three-custom-shader-material/vanilla";
     } else {
         dev = true;
     }
+
+    const cloudShader = {
+        vertexShader:
+        `
+          varying vec2 vUv;
+          void main() {
+            vUv = uv;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+          }
+        `,
+        fragmentShader:
+        `
+          uniform sampler2D map;
+          uniform vec3 fogColor;
+          uniform float fogNear;
+          uniform float fogFar;
+          varying vec2 vUv;
+      
+          void main() {
+      
+            float depth = gl_FragCoord.z / gl_FragCoord.w;
+            float fogFactor = smoothstep( fogNear, fogFar, depth );
+      
+            gl_FragColor = texture2D( map, vUv );
+            gl_FragColor.w *= pow( gl_FragCoord.z, 20.0 );
+            gl_FragColor = mix( gl_FragColor, vec4( fogColor , gl_FragColor.w ), fogFactor );
+      
+          }
+        `
+      }
 
     let customVertexShader = ` 
         uniform float translationX;
@@ -72,8 +120,8 @@ import CustomShaderMaterial from "three-custom-shader-material/vanilla";
                                 vec4(-sin(rotationY),0.0,cos(rotationY),0.0),
                                 vec4(0.0,0.0,0.0,1.0));
             
-            mat4 rZPos = mat4(vec4(cos(mix(2.0,rotationZ,alpha)),-sin(mix(2.0,rotationZ,alpha)),0.0,0.0),
-                                vec4(sin(mix(2.0,rotationZ,alpha)),cos(mix(2.0,rotationZ,alpha)),0.0,0.0),
+            mat4 rZPos = mat4(vec4(cos(mix(0.0,rotationZ,alpha)),-sin(mix(0.0,rotationZ,alpha)),0.0,0.0),
+                                vec4(sin(mix(0.0,rotationZ,alpha)),cos(mix(0.0,rotationZ,alpha)),0.0,0.0),
                                 vec4(0.0,0.0,1.0,0.0),
                                 vec4(0.0,0.0,0.0,1.0));
                                 
@@ -102,21 +150,100 @@ import CustomShaderMaterial from "three-custom-shader-material/vanilla";
         phase: {value : 0}
     }
 
-    let water;
+    
     // Scene setup
     const scene = new Scene();
-    const camera = new PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const camera = new PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100000);
 
     const renderer = new WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 
     //fog
-    scene.fog = new FogExp2( 0xccdbdf, 0.0012 );
+    //scene.fog = new FogExp2( 0xccdbdf, 0.00 );
+
+    var fog = new Fog( 0x4584b4, - 100, 3000 );
+    scene.fog = fog
+
+    //clouds
+    var tLoader = new TextureLoader()
+    let cloudTexture:any;
+    tLoader.load('https://pub-48572794ea984ea9976e5d5856e58593.r2.dev/static/textures/clouds/cloud10.png', (t)=> {
+    t.colorSpace = SRGBColorSpace;
+    cloudTexture = t;
+    //cloudTexture.magFilter = LinearMipMapLinearFilter;
+    //cloudTexture.minFilter = LinearMipMapLinearFilter;
+
+    let CloudMaterial = new ShaderMaterial( {
+
+        uniforms: {
+          "map": {value: cloudTexture },
+          "fogColor" : {value: fog.color },
+          "fogNear" : {value: fog.near },
+          "fogFar" : {value: fog.far },
+    
+        },
+        vertexShader: cloudShader.vertexShader,
+        fragmentShader: cloudShader.fragmentShader,
+        depthWrite: false,
+        depthTest: false,
+        transparent: true,
+      } );
+
+
+      const planeGeo = new THREE.PlaneGeometry( 64, 64 )
+      var planeObj = new THREE.Object3D()
+      const geometries = []
+    
+      for ( var i = 0; i < 8000; i++ ) {
+    
+        planeObj.position.x = Math.random() * 8000 - 500;
+        planeObj.position.y = - Math.random() * Math.random() * 100 - 15;
+        planeObj.position.z = i;
+        planeObj.rotation.z = Math.random() * Math.PI;
+        planeObj.rotation.x = -Math.PI/2;
+        planeObj.scale.x = planeObj.scale.y = Math.random() * Math.random() * 10 + 0.5;
+        planeObj.updateMatrix()
+        
+        const clonedPlaneGeo = planeGeo.clone();
+        clonedPlaneGeo.applyMatrix4(planeObj.matrix);
+    
+        geometries.push(clonedPlaneGeo)
+    
+      }
+      
+      const planeGeos = BufferGeometryUtils.mergeGeometries(geometries)
+      const planesMesh = new THREE.Mesh(planeGeos, CloudMaterial)
+      planesMesh.renderOrder = 2
+      
+      planesMeshA = planesMesh.clone();
+
+      //planesMeshA.rotation.x = Math.PI/8;
+      
+      planesMeshA.position.z = -4000;
+      planesMeshA.position.x = -2000;
+      planesMeshA.position.y = 900;
+
+
+    //   planesMesh.position.z = -4000;
+    //   planesMesh.position.x = -2000;
+    //   planesMesh.position.y = 300;
+
+      planesMeshA.renderOrder = 1
+
+      
+      //scene.add( planesMesh );
+      scene.add( planesMeshA );
+
+      const axesHelper = new THREE.AxesHelper( 5000 );
+        //scene.add( axesHelper );
+    });
+      
+
 
         // Add OrbitControls
     const controls = new OrbitControls(camera, renderer.domElement);
-    controls.autoRotate = true;
+    controls.autoRotate = false;
     controls.autoRotateSpeed = 10;
     controls.enablePan = false;
     controls.enableZoom = false;
@@ -125,14 +252,13 @@ import CustomShaderMaterial from "three-custom-shader-material/vanilla";
     controls.dampingFactor = 0.05;
     controls.screenSpacePanning = false;
     controls.minDistance = 1; // Minimum zoom distance
-    controls.maxDistance = 500; // Maximum zoom distance
+    controls.maxDistance = 5000; // Maximum zoom distance
     controls.maxPolarAngle = Math.PI / 2; // Limit vertical rotation to horizon
 
 
     //HDRI Loader
     const HDRURL = dev? 'textures/equirectangular/sky.hdr' : 'https://pub-48572794ea984ea9976e5d5856e58593.r2.dev/static/textures/equirectangular/sky.hdr'
-    new RGBELoader()
-        .load( HDRURL, function ( texture ) {
+    new RGBELoader().load( HDRURL, function ( texture ) {
 
             texture.mapping = EquirectangularReflectionMapping;
 
@@ -164,10 +290,32 @@ import CustomShaderMaterial from "three-custom-shader-material/vanilla";
             // Base material properties
             flatShading: true,
             //color: 0xff00ff
+            roughness: 0.8,
+            metalness: 0.2
         });
         PhasingMats.push(phaseMat);
     }
     
+    //path
+    const points = [new Vector3(-91.31397341831075, 500, -806.5606133954795),
+        new Vector3(-124.96847121756495, 149.62598767485653, -492.4503208179119),
+        new Vector3(-58.98197834822154, 111.04870404530332, -271.29202456297173),
+        new Vector3(-112.36151992286854, 34.59938306184129, -168.59959839408194),
+        new Vector3(-163.1728876749247, 6.187934658870702, -98.61409495498195),
+        new Vector3(-151.14042420369032, -10.332787826021395, -21.274821562941852),
+        new Vector3(-64.49169292296621, -0.41024873091703284, 56.14474189000002)];
+        
+      
+      camPath = new CatmullRomCurve3(points, false);
+      
+      const pathGeometry = new BufferGeometry().setFromPoints(
+        camPath.getPoints(50)
+      );
+      const pathMaterial = new LineBasicMaterial({ color: 0xff0000 });
+      const pathObject = new Line(pathGeometry, pathMaterial);
+      //scene.add(pathObject);
+
+
     // Create GLTF loader
     const gltfLoader = new GLTFLoader();
 
@@ -189,8 +337,6 @@ import CustomShaderMaterial from "three-custom-shader-material/vanilla";
             // Optional: Adjust position and scale
             model.position.set(0, 0, 0);
             model.scale.set(1, 1, 1);
-
-            console.log(model)
 
             // Optional: Enable shadows
             model.traverse((obj) => {
@@ -262,7 +408,8 @@ import CustomShaderMaterial from "three-custom-shader-material/vanilla";
                     }
                     else if(child.name.includes("water")){
                         child.visible = false;
-                        const waterGeometry = new PlaneGeometry( 1000,1000 );
+                        //const waterGeometry = new PlaneGeometry( 1000,1000 );
+                        const waterGeometry = new CircleGeometry( 400, 32 );
                         water = new Water( waterGeometry, {
                             color: 0x5cecff,
                             scale: 8,
@@ -278,7 +425,7 @@ import CustomShaderMaterial from "three-custom-shader-material/vanilla";
 
                         water.rotation.x = Math.PI * - 0.5;
                         scene.add( water );
-                        console.log(scene)
+                        water.visible = false;
                     }
                     else{
                         child.castShadow = true;
@@ -289,29 +436,26 @@ import CustomShaderMaterial from "three-custom-shader-material/vanilla";
                     //map: albedoMap,
                    //});
                 }
+
                 new TWEEN.Tween(CustomMaterial.uniforms.uTime)
-                .to( {value: 10.0} , 8000)
+                .to( {value: 10.0} , 12000)
                 .yoyo(false)
                 .repeat(0)
                 .easing(TWEEN.Easing.Cubic.InOut)
-                .start()
                 .onUpdate(function (time) {
                     if(time.value >= 7){
                         renderer.shadowMap.enabled = true;
                     }
-                    controls.autoRotateSpeed = 10-time.value;
+                    controls.autoRotateSpeed = 12-(time.value/12*10);
                   })
                   .onComplete(function () {
-                    controls.autoRotate = false; 
-                    controls.enablePan = true;
-                    controls.enableZoom = true;
-                    controls.enableRotate = true;           
+                             
                   })
-            ; 
+                  //.start(); 
             });
         },
         function (xhr) {
-            console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+           // console.log((xhr.loaded / xhr.total * 100) + '% loaded');
         },
         function (error) {
             console.log('An error occurred:', error);
@@ -397,11 +541,15 @@ import CustomShaderMaterial from "three-custom-shader-material/vanilla";
 
 
     // Camera position
-    camera.position.set(-50, 75, -150);
+    camera.position.set(-90, 1000, -800);
 
     // Animation loop
     function animate() {
         requestAnimationFrame(animate);
+        if(planesMeshA){
+            planesMeshA.rotation.y += 0.00004
+        }
+            
         csm.update();
         controls.update(); // Required for damping to work
         TWEEN.update();
@@ -415,5 +563,254 @@ import CustomShaderMaterial from "three-custom-shader-material/vanilla";
         camera.updateProjectionMatrix();
         renderer.setSize(window.innerWidth, window.innerHeight);
     });
+
+    let scrollTickCounter = 0;
+    let scrollCounter = 0;
+    let scrollStep = 0.0, scrollPercent = 0.0;
+    let phases = new Array(10).fill(0);
+
+
+
+    let typedText =  ['a village surrounded by mountains and a lake in the middle. The village has a dock, cottages, trees & cattle. \n\nlow-poly game world style'];
+    const typing = new AutoTyping('#dummy-text', typedText, {
+        keepText: true,
+        typeSpeed: 50,
+        onComplete: () => {
+            animatingText = false;            
+        }
+    });
+
+    //elements animating on scroll
+    // Configuration
+    const STAGE_MULTIPLIER = 5; // Each stage triggers every 25% scroll
+    const MAX_SCROLL = 100;
+
+    // Get all elements with 'aos' class
+    const aosElements = document.getElementsByClassName('aos');
+    const elements = Array.from(aosElements).map(element => {
+        // Get all data-AnimStage-* attributes
+        const stages:any = {};
+        for (const attr of element.attributes) {
+        if (attr.name.startsWith('data-animstage-')) {
+            const stageNum = parseInt(attr.name.replace('data-animstage-', ''));
+            const triggerAt = stageNum * STAGE_MULTIPLIER;
+            stages[triggerAt] = attr.value;
+        }
+        }
+        
+        // Convert to sorted array
+        const animations:any = Object.entries(stages)
+        .sort((a:any, b:any) => a[0] - b[0])
+        .map(([triggerAt, classes]) => ({
+            triggerAt: parseInt(triggerAt),
+            classes
+        }));
+
+        return {
+        element,
+        animations,
+        currentStage: -1
+        };
+    });
+
+    let currentScroll = 0;
+
+    // Array.from(aosElements).forEach(e => {
+    //     let item = {
+    //         "element":e, 
+    //         "triggerAt":Number(e.getAttribute("data-animate-at"))*5,
+    //         shown:false,
+    //         showClasses: e.getAttribute("data-show-classes")?.split(' '),
+    //         hideClasses: e.getAttribute("data-hide-classes")?.split(' ')
+    //     }
+    //     aosItems.push(item);
+    // });
+
+    // Clamp number between two values with the following line:
+    const clamp = (num:number, min:number, max:number) => Math.min(Math.max(num, min), max)
+    addEventListener("wheel", (event) => {
+
+        // Prevent default scrolling
+        //event.preventDefault();
+        
+      // Process each element's animations
+      // Update scroll position (0-MAX_SCROLL)
+      const scrollDelta = event.deltaY * 0.01;
+      currentScroll = Math.max(0, Math.min(MAX_SCROLL, currentScroll + scrollDelta));
+
+
+      if(animatingText && currentScroll>10){
+        //console.log(currentScroll,newStage,item.currentStage)
+        console.log('finish')
+        typing.finish();
+        animatingText = false;
+    }
+
+      //console.log(currentScroll)
+      // Process each element's animations
+      elements.forEach(item => {
+        const { element, animations } = item;
+        let newStage = -1;
+        
+        // Determine current stage based on scroll position
+        for (let i = animations.length - 1; i >= 0; i--) {
+          if (currentScroll >= animations[i].triggerAt) {
+            newStage = i;
+            break;
+          }
+        }
+        
+        // Only update if stage changed
+        console.log(currentScroll,newStage,item.currentStage)
+        if (newStage !== item.currentStage) {
+            if(newStage == 0 && item.element.id == "dummy-promptbox"){
+                console.log("change-1")
+                console.log(currentScroll,newStage,item.currentStage)
+                typing.stop(true);
+                typing.start();
+                animatingText = true;
+            }
+            if(newStage == 1 && item.element.id == "dummy-promptbox"){
+                scrollCounter=0
+            }
+          // First remove all animation classes from previous stages
+          animations.forEach((anim:any) => {
+            anim.classes.split(' ').forEach((className:any) => {
+              element.classList.remove(className);
+            });
+          });
+
+          // Then add classes up to current stage
+          for (let i = 0; i <= newStage; i++) {
+            animations[i].classes.split(' ').forEach((className:any) => {
+              element.classList.add(className);
+            });
+          }
+
+          item.currentStage = newStage;
+        }
+      });
+
+
+
+
+        scrollCounter += event.deltaY;
+        scrollStep = scrollCounter/400;
+
+        // if(scrollStep < 2){
+        //     let banner:any = document.getElementById("hero-banner");
+		// 	banner.classList.add("-translate-y-150", 'opacity-0');
+            
+        //     let nav:any = document.getElementById('navbar');
+        //     nav.classList.add('opacity-100');
+        //     console.log('animated full');
+
+        //     const promptBox:any = document.getElementById('dummy-promptbox');
+        //     promptBox.classList.remove('-bottom-100');
+        //     promptBox.classList.add('bottom-24');
+        // }
+
+        //console.log('step , percent = ',scrollStep, scrollPercent);
+        scrollPercent = scrollStep/20; //clamp(scrollStep/20,0,1.0);
+        //console.log('AFTER step , percent = ',scrollStep, scrollPercent);
+        //phase-1 
+        if((scrollStep > 3.5) && (phases[0]!=1) ){
+            phases[0] = 1;
+            tweenTimeTo(1,2000);
+        }
+        //phase-2
+        if((scrollStep > 5.5) && (phases[1]!=1) ){
+            phases[1] = 1;
+            tweenTimeTo(2,2000);
+        }
+        //phase-3
+        if((scrollStep > 8) && (phases[2]!=1) ){
+            phases[2] = 1;
+            tweenTimeTo(3,2000);
+            //remove clouds
+            planesMeshA.geometry.dispose();
+            planesMeshA.material.dispose();
+            scene.remove( planesMeshA );
+            
+        }
+        //phase-4
+        if((scrollStep > 9) && (phases[3]!=1) ){
+            phases[3] = 1;
+            tweenTimeTo(4,2000);
+            water.visible=true;
+        }
+        //phase-5
+        if((scrollStep > 10) && (phases[4]!=1) ){
+            phases[4] = 1;
+            tweenTimeTo(5,2000);
+        }
+        //phase-6
+        if((scrollStep > 11) && (phases[5]!=1) ){
+            phases[5] = 1;
+            tweenTimeTo(6,2000);
+        }
+        //phase-7
+        if((scrollStep > 13) && (phases[6]!=1) ){
+            phases[6] = 1;
+            tweenTimeTo(7,2000);
+        }
+        //phase-8
+        if((scrollStep > 14) && (phases[7]!=1) ){
+            phases[7] = 1;
+            tweenTimeTo(8,2000);
+        }
+        //phase-9
+        if((scrollStep > 15) && (phases[8]!=1) ){
+            phases[8] = 1;
+            tweenTimeTo(9,2000);
+        }
+        //phase-10
+        if((scrollStep > 16) && (phases[9]!=1) ){
+            phases[9] = 1;
+            tweenTimeTo(10,2000);
+            controls.enablePan = true;
+            controls.enableZoom = true;
+            controls.enableRotate = true;
+
+            document.getElementById('scroll-indicator').style.visibility = "hidden";
+        }
+        if(scrollPercent<=1.0 && scrollPercent>=0.18 && !controls.enableZoom){
+            tweenCameraTo(camPath.getPointAt(scrollPercent), 2000)
+        }
+    });
+
+    function tweenTimeTo(targetTime:number, duration:number){
+        new TWEEN.Tween(CustomMaterial.uniforms.uTime)
+        .to( {value: targetTime} , duration)
+        .yoyo(false)
+        .repeat(0)
+        .easing(TWEEN.Easing.Cubic.InOut)
+        .onUpdate(function (time:any) {
+            if(time.value >= 7){
+                renderer.shadowMap.enabled = true;
+            }
+            //controls.autoRotateSpeed = 12-(time.value/12*10);
+          })
+          .onComplete(function () {           
+          })
+          .start();
+    }
+
+    function tweenCameraTo(targetPos:Vector3, duration:number){
+        new TWEEN.Tween(camera.position)
+        .to( {x:targetPos.x, y:targetPos.y, z:targetPos.z} , duration)
+        .yoyo(false)
+        .repeat(0)
+        .easing(TWEEN.Easing.Cubic.InOut)
+        .onUpdate(function (pos) {
+            //controls.autoRotateSpeed = 12-(time.value/12*10);
+          })
+          .onComplete(function () {           
+          })
+          .start();
+    }
 }
+
+
+
   

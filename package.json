@@ -60,8 +60,12 @@
 		"@babylonjs/loaders": "^8.0.1",
 		"@babylonjs/materials": "^8.0.1",
 		"@babylonjs/post-processes": "^8.0.1",
+		"autotyping": "^1.2.6",
+		"install": "^0.13.0",
+		"preline": "^3.0.1",
 		"three": "^0.174.0",
 		"three-custom-shader-material": "6.3.1",
-		"three-mesh-bvh": "^0.9.0"
+		"three-mesh-bvh": "^0.9.0",
+		"typewriter-effect": "^2.21.0"
 	}
 }

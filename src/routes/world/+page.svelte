@@ -2,6 +2,8 @@
     import { onMount } from "svelte";
 	import { fade } from "svelte/transition";
 	import { page } from '$app/stores';
+	// Preline UI
+	import("preline/dist");
 
 
 	let el:HTMLCanvasElement;
