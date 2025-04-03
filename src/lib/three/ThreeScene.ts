@@ -166,7 +166,7 @@ import AutoTyping from '$lib/typewriter/auto.js';
     //fog
     //scene.fog = new FogExp2( 0xccdbdf, 0.00 );
 
-    var fog = new Fog( 0x9ebaba, - 100, 2000 );
+    var fog = new Fog( 0x6ba4b6, - 100, 2000 );
     scene.fog = fog
 
     //clouds
@@ -851,10 +851,7 @@ import AutoTyping from '$lib/typewriter/auto.js';
             if((time > 0.2) && (phases[2]!=1) ){
                 phases[2] = 1;
                 tweenTimeTo(3,2000);
-                //remove clouds
-                planesMeshA.geometry.dispose();
-                planesMeshA.material.dispose();
-                scene.remove( planesMeshA );
+                
                 
             }
             //phase-4
@@ -867,6 +864,11 @@ import AutoTyping from '$lib/typewriter/auto.js';
             if((time > 0.4) && (phases[4]!=1) ){
                 phases[4] = 1;
                 tweenTimeTo(5,2000);
+
+                //remove clouds
+                planesMeshA.geometry.dispose();
+                planesMeshA.material.dispose();
+                scene.remove( planesMeshA );
             }
             //phase-6
             if((time > 0.5) && (phases[5]!=1) ){
@@ -899,6 +901,7 @@ import AutoTyping from '$lib/typewriter/auto.js';
             controls.enableZoom = true;
             controls.enableRotate = true;       
             cameraAnimated = true;
+            document.getElementById('getWaitlistContainer').classList.remove('invisible')
           })
           .start();
     }

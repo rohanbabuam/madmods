@@ -181,7 +181,8 @@ data-animstage-3="-translate-y-full delay-400">
   </div>
 </div>
 
-<div id="getWaitlistContainer" data-waitlist_id="26970" data-widget_type="WIDGET_1" class="absolute z-100"></div>
+<div id="getWaitlistContainer" data-waitlist_id="26970" data-widget_type="WIDGET_1" 
+class="absolute z-100 opacity-90 h-screen flex items-center justify-center invisible"></div>
 
 
 <div id="scroll-indicator" class="scroll-downs absolute bottom-6 left-1/2 transform -translate-x-1/2 z-50">
