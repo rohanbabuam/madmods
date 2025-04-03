@@ -42,7 +42,7 @@ data-animstage-3="-translate-y-full delay-400">
 
 <div id="dummy-promptbox" 
      class="fixed left-1/2 transform -translate-x-1/2 w-full max-w-md
-            aos transition-all -bottom-100 delay-200 duration-500 ease-out opacity-90"
+            aos transition-all -bottom-100 delay-200 duration-500 ease-out opacity-80"
      data-animstage-1="bottom-36"
      data-animstage-3="translate-y-120">
   
@@ -164,46 +164,18 @@ data-animstage-3="-translate-y-full delay-400">
         
         <!-- Send Button (Primary Action) -->
         <button type="button" class="
-  flex justify-center items-center size-8 rounded-lg 
-  bg-gradient-to-br from-purple-500 to-[#420085] text-white
-  shadow-[0_0_8px_2px_rgba(168,85,247,0.6)] hover:shadow-[0_0_12px_4px_rgba(168,85,247,0.8)]
-  transition-all duration-300
-  group relative overflow-hidden">
-  
-  <!-- Sparkle Particles (hidden until hover) -->
-  <div class="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-    <div class="absolute top-1 left-3 w-0.5 h-0.5 bg-white rounded-full animate-sparkle-1"></div>
-    <div class="absolute top-2 right-2 w-0.5 h-0.5 bg-white rounded-full animate-sparkle-2"></div>
-    <div class="absolute bottom-2 left-4 w-0.5 h-0.5 bg-white rounded-full animate-sparkle-3"></div>
-  </div>
+			flex justify-center items-center size-8 rounded-lg 
+			bg-gradient-to-br from-purple-500 to-[#420085] text-white
+			shadow-[0_0_8px_2px_rgba(168,85,247,0.6)] hover:shadow-[0_0_12px_4px_rgba(168,85,247,0.8)]
+			transition-all duration-300
+			group relative overflow-hidden">
 
-  <!-- Star Rating Icon -->
-  <svg class="size-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" stroke="none">
-    <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
-  </svg>
-  
-  <!-- Add this to your CSS -->
-  <style>
-    @keyframes sparkle-1 {
-      0% { transform: translateY(0) scale(1); opacity: 0; }
-      50% { opacity: 1; }
-      100% { transform: translateY(-8px) scale(0.5); opacity: 0; }
-    }
-    @keyframes sparkle-2 {
-      0% { transform: translateY(0) scale(1); opacity: 0; }
-      50% { opacity: 1; }
-      100% { transform: translateY(-6px) translateX(2px) scale(0.3); opacity: 0; }
-    }
-    @keyframes sparkle-3 {
-      0% { transform: translateY(0) scale(1); opacity: 0; }
-      50% { opacity: 1; }
-      100% { transform: translateY(-4px) translateX(-1px) scale(0.4); opacity: 0; }
-    }
-    .animate-sparkle-1 { animation: sparkle-1 1.5s infinite; }
-    .animate-sparkle-2 { animation: sparkle-2 1.8s infinite 0.3s; }
-    .animate-sparkle-3 { animation: sparkle-3 1.6s infinite 0.6s; }
-  </style>
-</button>
+
+			<!-- Star Rating Icon -->
+			<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-stars" viewBox="0 0 16 16">
+				<path d="M7.657 6.247c.11-.33.576-.33.686 0l.645 1.937a2.89 2.89 0 0 0 1.829 1.828l1.936.645c.33.11.33.576 0 .686l-1.937.645a2.89 2.89 0 0 0-1.828 1.829l-.645 1.936a.361.361 0 0 1-.686 0l-.645-1.937a2.89 2.89 0 0 0-1.828-1.828l-1.937-.645a.361.361 0 0 1 0-.686l1.937-.645a2.89 2.89 0 0 0 1.828-1.828zM3.794 1.148a.217.217 0 0 1 .412 0l.387 1.162c.173.518.579.924 1.097 1.097l1.162.387a.217.217 0 0 1 0 .412l-1.162.387A1.73 1.73 0 0 0 4.593 5.69l-.387 1.162a.217.217 0 0 1-.412 0L3.407 5.69A1.73 1.73 0 0 0 2.31 4.593l-1.162-.387a.217.217 0 0 1 0-.412l1.162-.387A1.73 1.73 0 0 0 3.407 2.31zM10.863.099a.145.145 0 0 1 .274 0l.258.774c.115.346.386.617.732.732l.774.258a.145.145 0 0 1 0 .274l-.774.258a1.16 1.16 0 0 0-.732.732l-.258.774a.145.145 0 0 1-.274 0l-.258-.774a1.16 1.16 0 0 0-.732-.732L9.1 2.137a.145.145 0 0 1 0-.274l.774-.258c.346-.115.617-.386.732-.732z"/>
+			</svg>
+		</button>
       </div>
     </div>
   </div>
