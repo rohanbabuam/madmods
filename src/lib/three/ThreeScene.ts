@@ -779,6 +779,18 @@ import AutoTyping from '$lib/typewriter/auto.js';
         }
     });
 
+    //Touch support for mobile
+    let touchStartY = 0;
+    window.addEventListener('touchstart', (e) => {
+        touchStartY = e.touches[0].clientY;
+    });
+    window.addEventListener('touchmove', (e) => {
+        const touchY = e.touches[0].clientY;
+        const deltaY = touchStartY - touchY; // Inverted for natural scrolling
+        window.dispatchEvent(new WheelEvent('wheel', { deltaY }));
+        e.preventDefault();
+    }, { passive: false });
+
     function tweenTimeTo(targetTime:number, duration:number){
         new TWEEN.Tween(CustomMaterial.uniforms.uTime)
         .to( {value: targetTime} , duration)
