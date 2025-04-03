@@ -5,7 +5,7 @@
 	let { children } = $props();
 
 	afterNavigate(() => {
-    window.HSStaticMethods.autoInit();
+
   });
 </script>
 
@@ -13,8 +13,8 @@
 
 
 <header id="navbar" class="fixed flex flex-wrap sm:justify-start sm:flex-nowrap w-full text-sm py-3 z-100
-bg-black/10 backdrop-blur-lg
-aos opacity-0 transition-opacity duration-500 ease-in-out"
+bg-black/20 backdrop-blur-lg
+aos opacity-100 transition-opacity duration-500 ease-in-out"
 	 data-animstage-1="opacity-100"
 	 >
 	<nav class="max-w-[85rem] w-full mx-auto px-4 sm:flex sm:items-center sm:justify-between">

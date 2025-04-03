@@ -43,6 +43,8 @@ import AutoTyping from '$lib/typewriter/auto.js';
   let planesMeshA:any;
   let animatingText:boolean = false, animatingCamera:boolean = false, animatingMesh:boolean = false; 
   let water:any;
+  let cameraAnimated = false;
+  let CloudMaterial:any;
 
   export const init = async() => {
     if (window.location.port === "") {
@@ -66,6 +68,7 @@ import AutoTyping from '$lib/typewriter/auto.js';
           uniform vec3 fogColor;
           uniform float fogNear;
           uniform float fogFar;
+          uniform float opacity;
           varying vec2 vUv;
       
           void main() {
@@ -76,6 +79,7 @@ import AutoTyping from '$lib/typewriter/auto.js';
             gl_FragColor = texture2D( map, vUv );
             gl_FragColor.w *= pow( gl_FragCoord.z, 20.0 );
             gl_FragColor = mix( gl_FragColor, vec4( fogColor , gl_FragColor.w ), fogFactor );
+            gl_FragColor = vec4(gl_FragColor.rgb, gl_FragColor.a*opacity);
       
           }
         `
@@ -162,7 +166,7 @@ import AutoTyping from '$lib/typewriter/auto.js';
     //fog
     //scene.fog = new FogExp2( 0xccdbdf, 0.00 );
 
-    var fog = new Fog( 0x4584b4, - 100, 3000 );
+    var fog = new Fog( 0x9ebaba, - 100, 2000 );
     scene.fog = fog
 
     //clouds
@@ -174,13 +178,14 @@ import AutoTyping from '$lib/typewriter/auto.js';
     //cloudTexture.magFilter = LinearMipMapLinearFilter;
     //cloudTexture.minFilter = LinearMipMapLinearFilter;
 
-    let CloudMaterial = new ShaderMaterial( {
+    CloudMaterial = new ShaderMaterial( {
 
         uniforms: {
           "map": {value: cloudTexture },
           "fogColor" : {value: fog.color },
           "fogNear" : {value: fog.near },
           "fogFar" : {value: fog.far },
+          "opacity": {value : 1.0}
     
         },
         vertexShader: cloudShader.vertexShader,
@@ -198,10 +203,10 @@ import AutoTyping from '$lib/typewriter/auto.js';
       for ( var i = 0; i < 8000; i++ ) {
     
         planeObj.position.x = Math.random() * 8000 - 500;
-        planeObj.position.y = - Math.random() * Math.random() * 100 - 15;
+        planeObj.position.y = - Math.random() * Math.random() * 300 - 15;
         planeObj.position.z = i;
         planeObj.rotation.z = Math.random() * Math.PI;
-        planeObj.rotation.x = -Math.PI/2;
+        planeObj.rotation.x = -1.8;
         planeObj.scale.x = planeObj.scale.y = Math.random() * Math.random() * 10 + 0.5;
         planeObj.updateMatrix()
         
@@ -218,11 +223,11 @@ import AutoTyping from '$lib/typewriter/auto.js';
       
       planesMeshA = planesMesh.clone();
 
-      //planesMeshA.rotation.x = Math.PI/8;
+      //planesMeshA.rotation.x = .1;
       
       planesMeshA.position.z = -4000;
       planesMeshA.position.x = -2000;
-      planesMeshA.position.y = 900;
+      planesMeshA.position.y = 400;
 
 
     //   planesMesh.position.z = -4000;
@@ -302,8 +307,9 @@ import AutoTyping from '$lib/typewriter/auto.js';
         new Vector3(-58.98197834822154, 111.04870404530332, -271.29202456297173),
         new Vector3(-112.36151992286854, 34.59938306184129, -168.59959839408194),
         new Vector3(-163.1728876749247, 6.187934658870702, -98.61409495498195),
-        new Vector3(-151.14042420369032, -10.332787826021395, -21.274821562941852),
-        new Vector3(-64.49169292296621, -0.41024873091703284, 56.14474189000002)];
+        new Vector3(-151.14042420369032, 2.332787826021395, -21.274821562941852),
+        //new Vector3(-64.49169292296621, -0.41024873091703284, 56.14474189000002)
+    ];
         
       
       camPath = new CatmullRomCurve3(points, false);
@@ -541,7 +547,7 @@ import AutoTyping from '$lib/typewriter/auto.js';
 
 
     // Camera position
-    camera.position.set(-90, 1000, -800);
+    camera.position.set(-90, 500, -800);
 
     // Animation loop
     function animate() {
@@ -648,134 +654,123 @@ import AutoTyping from '$lib/typewriter/auto.js';
 
       //console.log(currentScroll)
       // Process each element's animations
-      elements.forEach(item => {
-        const { element, animations } = item;
-        let newStage = -1;
-        
-        // Determine current stage based on scroll position
-        for (let i = animations.length - 1; i >= 0; i--) {
-          if (currentScroll >= animations[i].triggerAt) {
-            newStage = i;
-            break;
-          }
-        }
-        
-        // Only update if stage changed
-        console.log(currentScroll,newStage,item.currentStage)
-        if (newStage !== item.currentStage) {
-            if(newStage == 0 && item.element.id == "dummy-promptbox"){
-                console.log("change-1")
-                console.log(currentScroll,newStage,item.currentStage)
-                typing.stop(true);
-                typing.start();
-                animatingText = true;
+      if(!cameraAnimated){
+          elements.forEach(item => {
+            const { element, animations } = item;
+            let newStage = -1;
+            
+            // Determine current stage based on scroll position
+            for (let i = animations.length - 1; i >= 0; i--) {
+              if (currentScroll >= animations[i].triggerAt) {
+                newStage = i;
+                break;
+              }
             }
-            if(newStage == 1 && item.element.id == "dummy-promptbox"){
-                scrollCounter=0
+            
+            // Only update if stage changed
+            console.log(currentScroll,newStage,item.currentStage)
+            if (newStage !== item.currentStage) {
+                if(newStage == 0 && item.element.id == "dummy-promptbox"){
+                    //console.log("change-1")
+                    //console.log(currentScroll,newStage,item.currentStage)
+                    typing.stop(true);
+                    typing.start();
+                    animatingText = true;
+                }
+                if(newStage == 1 && item.element.id == "dummy-promptbox"){
+                    scrollCounter=1500;
+                    if(!cameraAnimated)
+                    tweenCameraAuto();
+                }
+              // First remove all animation classes from previous stages
+              animations.forEach((anim:any) => {
+                anim.classes.split(' ').forEach((className:any) => {
+                  element.classList.remove(className);
+                });
+              });
+    
+              // Then add classes up to current stage
+              for (let i = 0; i <= newStage; i++) {
+                animations[i].classes.split(' ').forEach((className:any) => {
+                  element.classList.add(className);
+                });
+              }
+    
+              item.currentStage = newStage;
             }
-          // First remove all animation classes from previous stages
-          animations.forEach((anim:any) => {
-            anim.classes.split(' ').forEach((className:any) => {
-              element.classList.remove(className);
-            });
           });
-
-          // Then add classes up to current stage
-          for (let i = 0; i <= newStage; i++) {
-            animations[i].classes.split(' ').forEach((className:any) => {
-              element.classList.add(className);
-            });
-          }
-
-          item.currentStage = newStage;
-        }
-      });
+      }
 
 
 
 
         scrollCounter += event.deltaY;
         scrollStep = scrollCounter/400;
-
-        // if(scrollStep < 2){
-        //     let banner:any = document.getElementById("hero-banner");
-		// 	banner.classList.add("-translate-y-150", 'opacity-0');
-            
-        //     let nav:any = document.getElementById('navbar');
-        //     nav.classList.add('opacity-100');
-        //     console.log('animated full');
-
-        //     const promptBox:any = document.getElementById('dummy-promptbox');
-        //     promptBox.classList.remove('-bottom-100');
-        //     promptBox.classList.add('bottom-24');
-        // }
-
-        //console.log('step , percent = ',scrollStep, scrollPercent);
         scrollPercent = scrollStep/20; //clamp(scrollStep/20,0,1.0);
-        //console.log('AFTER step , percent = ',scrollStep, scrollPercent);
+        console.log('counter, step , percent = ', scrollCounter, scrollStep, scrollPercent);
         //phase-1 
-        if((scrollStep > 3.5) && (phases[0]!=1) ){
-            phases[0] = 1;
-            tweenTimeTo(1,2000);
-        }
-        //phase-2
-        if((scrollStep > 5.5) && (phases[1]!=1) ){
-            phases[1] = 1;
-            tweenTimeTo(2,2000);
-        }
-        //phase-3
-        if((scrollStep > 8) && (phases[2]!=1) ){
-            phases[2] = 1;
-            tweenTimeTo(3,2000);
-            //remove clouds
-            planesMeshA.geometry.dispose();
-            planesMeshA.material.dispose();
-            scene.remove( planesMeshA );
-            
-        }
-        //phase-4
-        if((scrollStep > 9) && (phases[3]!=1) ){
-            phases[3] = 1;
-            tweenTimeTo(4,2000);
-            water.visible=true;
-        }
-        //phase-5
-        if((scrollStep > 10) && (phases[4]!=1) ){
-            phases[4] = 1;
-            tweenTimeTo(5,2000);
-        }
-        //phase-6
-        if((scrollStep > 11) && (phases[5]!=1) ){
-            phases[5] = 1;
-            tweenTimeTo(6,2000);
-        }
-        //phase-7
-        if((scrollStep > 13) && (phases[6]!=1) ){
-            phases[6] = 1;
-            tweenTimeTo(7,2000);
-        }
-        //phase-8
-        if((scrollStep > 14) && (phases[7]!=1) ){
-            phases[7] = 1;
-            tweenTimeTo(8,2000);
-        }
-        //phase-9
-        if((scrollStep > 15) && (phases[8]!=1) ){
-            phases[8] = 1;
-            tweenTimeTo(9,2000);
-        }
-        //phase-10
-        if((scrollStep > 16) && (phases[9]!=1) ){
-            phases[9] = 1;
-            tweenTimeTo(10,2000);
-            controls.enablePan = true;
-            controls.enableZoom = true;
-            controls.enableRotate = true;
 
-            document.getElementById('scroll-indicator').style.visibility = "hidden";
-        }
-        if(scrollPercent<=1.0 && scrollPercent>=0.18 && !controls.enableZoom){
-            tweenCameraTo(camPath.getPointAt(scrollPercent), 2000)
+        // if((scrollStep > 3.5) && (phases[0]!=1) ){
+        //     phases[0] = 1;
+        //     tweenTimeTo(1,2000);
+        // }
+        // //phase-2
+        // if((scrollStep > 5.5) && (phases[1]!=1) ){
+        //     phases[1] = 1;
+        //     tweenTimeTo(2,2000);
+        // }
+        // //phase-3
+        // if((scrollStep > 8) && (phases[2]!=1) ){
+        //     phases[2] = 1;
+        //     tweenTimeTo(3,2000);
+        //     //remove clouds
+        //     planesMeshA.geometry.dispose();
+        //     planesMeshA.material.dispose();
+        //     scene.remove( planesMeshA );
+            
+        // }
+        // //phase-4
+        // if((scrollStep > 9) && (phases[3]!=1) ){
+        //     phases[3] = 1;
+        //     tweenTimeTo(4,2000);
+        //     water.visible=true;
+        // }
+        // //phase-5
+        // if((scrollStep > 10) && (phases[4]!=1) ){
+        //     phases[4] = 1;
+        //     tweenTimeTo(5,2000);
+        // }
+        // //phase-6
+        // if((scrollStep > 11) && (phases[5]!=1) ){
+        //     phases[5] = 1;
+        //     tweenTimeTo(6,2000);
+        // }
+        // //phase-7
+        // if((scrollStep > 13) && (phases[6]!=1) ){
+        //     phases[6] = 1;
+        //     tweenTimeTo(7,2000);
+        // }
+        // //phase-8
+        // if((scrollStep > 14) && (phases[7]!=1) ){
+        //     phases[7] = 1;
+        //     tweenTimeTo(8,2000);
+        // }
+        // //phase-9
+        // if((scrollStep > 15) && (phases[8]!=1) ){
+        //     phases[8] = 1;
+        //     tweenTimeTo(9,2000);
+        // }
+        // //phase-10
+        // if((scrollStep > 16) && (phases[9]!=1) ){
+        //     phases[9] = 1;
+        //     tweenTimeTo(10,2000);
+            
+
+        //     document.getElementById('scroll-indicator').style.visibility = "hidden";
+        // }
+        if(scrollPercent<=1.0 && scrollPercent>=0.25 && !controls.enableZoom){
+            console.log('tweening camera')
+            //tweenCameraTo(camPath.getPointAt(scrollPercent), 2000)
         }
     });
 
@@ -796,18 +791,20 @@ import AutoTyping from '$lib/typewriter/auto.js';
         .to( {value: targetTime} , duration)
         .yoyo(false)
         .repeat(0)
-        .easing(TWEEN.Easing.Cubic.InOut)
+        .easing(TWEEN.Easing.Quadratic.InOut)
         .onUpdate(function (time:any) {
             if(time.value >= 7){
                 renderer.shadowMap.enabled = true;
             }
             //controls.autoRotateSpeed = 12-(time.value/12*10);
           })
-          .onComplete(function () {           
+          .onComplete(function () {      
+            controls.enablePan = true;
+            controls.enableZoom = true;
+            controls.enableRotate = true;     
           })
           .start();
     }
-
     function tweenCameraTo(targetPos:Vector3, duration:number){
         new TWEEN.Tween(camera.position)
         .to( {x:targetPos.x, y:targetPos.y, z:targetPos.z} , duration)
@@ -818,6 +815,90 @@ import AutoTyping from '$lib/typewriter/auto.js';
             //controls.autoRotateSpeed = 12-(time.value/12*10);
           })
           .onComplete(function () {           
+          })
+          .start();
+    }
+
+    function tweenCameraAuto(){
+        document.getElementById('scroll-indicator').style.visibility = "hidden";
+        let t = {camTime: 0.0}
+        new TWEEN.Tween(t)
+        .to( {camTime: 1.0} , 10000)
+        .yoyo(false)
+        .repeat(0)
+        .easing(TWEEN.Easing.Quadratic.InOut)
+        .onUpdate(function (t) {
+            //controls.autoRotateSpeed = 12-(time.value/12*10);
+            //console.log(t);
+            //console.log(camPath.getPointAt(Number(t.camTime)))
+            let time = Number(t.camTime);
+
+            CloudMaterial.uniforms.opacity.value -= time/10;
+            let pos = camPath.getPointAt(time)
+            //console.log(pos)
+            camera.position.copy(pos);
+
+            if((time > 0.0) && (phases[0]!=1) ){
+                phases[0] = 1;
+                tweenTimeTo(1,2000);
+            }
+            //phase-2
+            if((time > 0.1) && (phases[1]!=1) ){
+                phases[1] = 1;
+                tweenTimeTo(2,2000);
+            }
+            //phase-3
+            if((time > 0.2) && (phases[2]!=1) ){
+                phases[2] = 1;
+                tweenTimeTo(3,2000);
+                //remove clouds
+                planesMeshA.geometry.dispose();
+                planesMeshA.material.dispose();
+                scene.remove( planesMeshA );
+                
+            }
+            //phase-4
+            if((time > 0.3) && (phases[3]!=1) ){
+                phases[3] = 1;
+                tweenTimeTo(4,2000);
+                water.visible=true;
+            }
+            //phase-5
+            if((time > 0.4) && (phases[4]!=1) ){
+                phases[4] = 1;
+                tweenTimeTo(5,2000);
+            }
+            //phase-6
+            if((time > 0.5) && (phases[5]!=1) ){
+                phases[5] = 1;
+                tweenTimeTo(6,2000);
+            }
+            //phase-7
+            if((time > 0.6) && (phases[6]!=1) ){
+                phases[6] = 1;
+                tweenTimeTo(7,2000);
+            }
+            //phase-8
+            if((time > 0.7) && (phases[7]!=1) ){
+                phases[7] = 1;
+                tweenTimeTo(8,2000);
+            }
+            //phase-9
+            if((time > 0.8) && (phases[8]!=1) ){
+                phases[8] = 1;
+                tweenTimeTo(9,2000);
+            }
+            //phase-10
+            if((time > 0.9) && (phases[9]!=1) ){
+                phases[9] = 1;
+                tweenTimeTo(10,2000);
+            }
+          })
+          .onComplete(function () {                
+            controls.enablePan = true;
+            controls.enableZoom = true;
+            controls.enableRotate = true;       
+            cameraAnimated = true;
           })
           .start();
     }

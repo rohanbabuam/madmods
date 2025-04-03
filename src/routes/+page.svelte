@@ -32,9 +32,9 @@ data-animstage-3="-translate-y-full delay-400">
 	src="/images/hero-bg.png" alt="logo"/>
 
 	<img id="hero-banner" 
-	class="fixed w-full h-auto opacity-100 object-cover object-bottom
-	aos transition-all duration-500 ease-in-out transform" 
-	data-animstage-1="opacity-0 -translate-y-150"
+	class="fixed w-full h-auto object-cover object-bottom
+	aos transition-all duration-500 ease-in-out -translate-y-30" 
+	data-animstage-3="-translate-y-150 opacity-0"
 	src="/images/hero-elm-1.svg" alt="logo"/>
 </div>
 
@@ -42,8 +42,8 @@ data-animstage-3="-translate-y-full delay-400">
 
 <div id="dummy-promptbox" 
      class="fixed left-1/2 transform -translate-x-1/2 w-full max-w-md
-            aos transition-all -bottom-100 delay-200 duration-500 ease-out opacity-80"
-     data-animstage-1="bottom-36"
+            aos transition-all -bottom-80 delay-200 duration-500 ease-out opacity-80"
+     data-animstage-1="bottom-36 delay-10 duration 250"
      data-animstage-3="translate-y-120">
   
   <!-- Game-themed textarea with filled background -->
@@ -180,6 +180,9 @@ data-animstage-3="-translate-y-full delay-400">
     </div>
   </div>
 </div>
+
+<div id="getWaitlistContainer" data-waitlist_id="26970" data-widget_type="WIDGET_1" class="absolute z-100"></div>
+
 
 <div id="scroll-indicator" class="scroll-downs absolute bottom-6 left-1/2 transform -translate-x-1/2 z-50">
 	<div class="mousey">
