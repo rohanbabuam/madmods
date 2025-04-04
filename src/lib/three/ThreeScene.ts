@@ -577,7 +577,7 @@ import AutoTyping from '$lib/typewriter/auto.js';
 
 
 
-    let typedText =  ['a village surrounded by mountains and a lake in the middle. The village has a dock, cottages, trees & cattle. \n\nlow-poly game world style'];
+    let typedText =  ['create a village surrounded by mountains and a lake in the middle. The village has a dock, cottages, trees & cattle. \n\nlow-poly game world style'];
     const typing = new AutoTyping('#dummy-text', typedText, {
         keepText: true,
         typeSpeed: 50,
@@ -901,7 +901,7 @@ import AutoTyping from '$lib/typewriter/auto.js';
             controls.enableZoom = true;
             controls.enableRotate = true;       
             cameraAnimated = true;
-            document.getElementById('getWaitlistContainer').classList.remove('invisible')
+            document.getElementById('waitlist-widget').classList.remove('invisible')
           })
           .start();
     }
