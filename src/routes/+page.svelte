@@ -182,26 +182,26 @@ data-animstage-3="-translate-y-full delay-400">
 </div>
 
 
-<!-- <div>
+<div>
 	<div id="getWaitlistContainer" data-waitlist_id="26970" data-widget_type="WIDGET_1" 
 	class="absolute z-100 opacity-90 h-screen flex items-center justify-center invisible"></div>
-</div> -->
+</div>
 
-  <div class="absolute border-4 border-green-500 z-100 opacity-90 w-150 h-180 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" id="waitlist-widget"> <!-- Wrapper with relative positioning -->
-	<!-- Your existing container -->
+  <!-- <div class="absolute border-4 border-green-500 z-100 opacity-90 w-150 h-180 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 invisible" id="waitlist-widget">
+
 	<div id="getWaitlistContainer" 
 		 data-waitlist_id="26970" 
 		 data-widget_type="WIDGET_1" 
 		 class="absolute h-full w-full top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
 	</div>
   
-	<!-- Close button (positioned relative to getWaitlistContainer) -->
-	<!-- <button class="absolute z-200 right-4 top-4 border-4 border-black rounded-full bg-gray-200 hover:bg-gray-300 text-gray-700 shadow-md">
+	<button class="absolute z-200 right-4 top-4 border-4 border-black rounded-full bg-gray-200 hover:bg-gray-300 text-gray-700 shadow-md">
 		<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
 		<path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
 		</svg>
-	</button> -->
-  </div>
+	</button>
+
+  </div>  -->
   
 
 

@@ -901,7 +901,7 @@ import AutoTyping from '$lib/typewriter/auto.js';
             controls.enableZoom = true;
             controls.enableRotate = true;       
             cameraAnimated = true;
-            document.getElementById('waitlist-widget').classList.remove('invisible')
+            document.getElementById('getWaitlistContainer').classList.remove('invisible')
           })
           .start();
     }
