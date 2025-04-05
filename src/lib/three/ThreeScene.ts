@@ -443,21 +443,21 @@ import AutoTyping from '$lib/typewriter/auto.js';
                    //});
                 }
 
-                new TWEEN.Tween(CustomMaterial.uniforms.uTime)
-                .to( {value: 10.0} , 12000)
-                .yoyo(false)
-                .repeat(0)
-                .easing(TWEEN.Easing.Cubic.InOut)
-                .onUpdate(function (time) {
-                    if(time.value >= 7){
-                        renderer.shadowMap.enabled = true;
-                    }
-                    controls.autoRotateSpeed = 12-(time.value/12*10);
-                  })
-                  .onComplete(function () {
+                // new TWEEN.Tween(CustomMaterial.uniforms.uTime)
+                // .to( {value: 10.0} , 12000)
+                // .yoyo(false)
+                // .repeat(0)
+                // .easing(TWEEN.Easing.Cubic.InOut)
+                // .onUpdate(function (time) {
+                //     if(time.value >= 7){
+                //         renderer.shadowMap.enabled = true;
+                //     }
+                //     controls.autoRotateSpeed = 12-(time.value/12*10);
+                //   })
+                //   .onComplete(function () {
                              
-                  })
-                  //.start(); 
+                //   })
+                //   .start(); 
             });
         },
         function (xhr) {
@@ -793,15 +793,12 @@ import AutoTyping from '$lib/typewriter/auto.js';
         .repeat(0)
         .easing(TWEEN.Easing.Quadratic.InOut)
         .onUpdate(function (time:any) {
-            if(time.value >= 7){
-                renderer.shadowMap.enabled = true;
+            if(time.value == 7){
+                
             }
             //controls.autoRotateSpeed = 12-(time.value/12*10);
           })
           .onComplete(function () {      
-            controls.enablePan = true;
-            controls.enableZoom = true;
-            controls.enableRotate = true;     
           })
           .start();
     }
@@ -899,9 +896,10 @@ import AutoTyping from '$lib/typewriter/auto.js';
           .onComplete(function () {                
             controls.enablePan = true;
             controls.enableZoom = true;
-            controls.enableRotate = true;       
+            controls.enableRotate = true;     
+            renderer.shadowMap.enabled = true;   
             cameraAnimated = true;
-            document.getElementById('getWaitlistContainer').classList.remove('invisible')
+            document.getElementById('waitlist-container').classList.remove('collapse')
           })
           .start();
     }

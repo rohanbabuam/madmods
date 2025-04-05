@@ -30,19 +30,35 @@ data-animstage-3="-translate-y-full delay-400">
 	<img id="hero-bg" 
 	class="fixed w-full h-screen object-cover" 
 	src="/images/hero-bg.png" alt="logo"/>
+</div>
 
+<div class="absolute w-full h-screen flex flex-col gap-2 items-center justify-start pt-40 z-10 border-0 border-red-500
+aos transition-all duration-500 ease-in-out"
+data-animstage-3="-translate-y-250 delay-400">
 	<img id="hero-banner" 
-	class="fixed w-full h-auto object-cover object-bottom
-	aos transition-all duration-500 ease-in-out -translate-y-30" 
+	class="w-1/2 h-auto object-cover
+	aos transition-all duration-500 ease-in-out" 
 	data-animstage-3="-translate-y-150 opacity-0"
-	src="/images/hero-elm-1.svg" alt="logo"/>
+	src="/logos/madmods-logo6.svg" alt="logo"/>
+
+	<div id="hero-text" class="text-3xl text-center
+	aos transition-all duration-500 ease-in-out" 
+	data-animstage-3="-translate-y-150 opacity-0">
+		<h1 class="mb-4 text-4xl font-bold leading-none text-center 
+		w-full tracking-tight text-white md:text-5xl lg:text-8xl dark:text-white">
+		Build 3D Worlds in Seconds</h1>
+		<p class="mb-6 
+		 text-white text-center text-2xl font-normal lg:text-5xl 
+		sm:px-16 xl:px-48 dark:white">
+			Play & Share with your Friends Instantly
+	</div>
 </div>
 
 
 
 <div id="dummy-promptbox" 
      class="fixed left-1/2 transform -translate-x-1/2 w-full max-w-md
-            aos transition-all -bottom-80 delay-200 duration-500 ease-out opacity-80"
+            aos transition-all -bottom-80 delay-200 duration-500 ease-out opacity-95"
      data-animstage-1="bottom-36 delay-10 duration 250"
      data-animstage-3="translate-y-120">
   
@@ -172,6 +188,7 @@ data-animstage-3="-translate-y-full delay-400">
 
 
 			<!-- Star Rating Icon -->
+			<!-- GENERATE -->
 			<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-stars" viewBox="0 0 16 16">
 				<path d="M7.657 6.247c.11-.33.576-.33.686 0l.645 1.937a2.89 2.89 0 0 0 1.829 1.828l1.936.645c.33.11.33.576 0 .686l-1.937.645a2.89 2.89 0 0 0-1.828 1.829l-.645 1.936a.361.361 0 0 1-.686 0l-.645-1.937a2.89 2.89 0 0 0-1.828-1.828l-1.937-.645a.361.361 0 0 1 0-.686l1.937-.645a2.89 2.89 0 0 0 1.828-1.828zM3.794 1.148a.217.217 0 0 1 .412 0l.387 1.162c.173.518.579.924 1.097 1.097l1.162.387a.217.217 0 0 1 0 .412l-1.162.387A1.73 1.73 0 0 0 4.593 5.69l-.387 1.162a.217.217 0 0 1-.412 0L3.407 5.69A1.73 1.73 0 0 0 2.31 4.593l-1.162-.387a.217.217 0 0 1 0-.412l1.162-.387A1.73 1.73 0 0 0 3.407 2.31zM10.863.099a.145.145 0 0 1 .274 0l.258.774c.115.346.386.617.732.732l.774.258a.145.145 0 0 1 0 .274l-.774.258a1.16 1.16 0 0 0-.732.732l-.258.774a.145.145 0 0 1-.274 0l-.258-.774a1.16 1.16 0 0 0-.732-.732L9.1 2.137a.145.145 0 0 1 0-.274l.774-.258c.346-.115.617-.386.732-.732z"/>
 			</svg>
@@ -182,9 +199,28 @@ data-animstage-3="-translate-y-full delay-400">
 </div>
 
 
-<div>
-	<div id="getWaitlistContainer" data-waitlist_id="26970" data-widget_type="WIDGET_1" 
-	class="absolute z-100 opacity-90 h-screen flex items-center justify-center invisible"></div>
+<!-- <div id="getWaitlistContainer" data-waitlist_id="27059" data-widget_type="WIDGET_1"
+class="absolute z-100"></div> -->
+
+<div id="waitlist-container" 
+class = "z-10 border-0 border-red-500 opacity-100 collapse center origin-center">
+	<button id="waitlist-close" 
+	class="
+	flex items-center justify-center opacity-90
+	absolute z-200 right-4 top-8 border-4 
+	border-white rounded-full 
+	bg-gray-200 hover:bg-white text-gray-700 shadow-md" onclick={(e)=>{
+		let waitlist = document.getElementById('waitlist-container');
+		if(waitlist){
+			waitlist.classList.add('collapse')
+		}
+	}}>
+		<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+		<path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+		</svg>
+	</button>
+	<div id="getWaitlistContainer" data-waitlist_id="27059" data-widget_type="WIDGET_1" 
+	class=""></div>
 </div>
 
   <!-- <div class="absolute border-4 border-green-500 z-100 opacity-90 w-150 h-180 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 invisible" id="waitlist-widget">
@@ -204,10 +240,11 @@ data-animstage-3="-translate-y-full delay-400">
   </div>  -->
   
 
-
-<div id="scroll-indicator" class="scroll-downs absolute bottom-6 left-1/2 transform -translate-x-1/2 z-50">
-	<div class="mousey">
-	  <div class="scroller"></div>
+  <div id="scroll-indicator" class="scroll-downs absolute bottom-4 left-1/2 transform -translate-x-1/2 z-50 text-center">
+	<span class=' absolute z-100 text-white text-xl text-center border-0 pl-[8px] border-yellow-500 center-h text-center bottom-16
+	'>Scroll</span>
+	<div class="mousey text-center">
+	  <div class="scroller text-center"></div>
 	</div>
 </div>
 
@@ -220,6 +257,24 @@ data-animstage-3="-translate-y-full delay-400">
   padding: 0;
   margin: 0;
 }
+
+.center {
+  margin: 0;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  -ms-transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%);
+}
+
+.center-h {
+  margin: 0;
+  position: absolute;
+  left: 50%;
+  -ms-transform: translate(-50%, 0%);
+  transform: translate(-50%, 0%);
+}
+
 .scroll-downs { 
   width :34px;
   height: 55px;
@@ -228,7 +283,7 @@ data-animstage-3="-translate-y-full delay-400">
   width: 3px;
   padding: 10px 15px;
   height: 35px;
-  border: 4px solid #ffbf00;
+  border: 4px solid #fff;
   border-radius: 25px;
   opacity: 0.75;
   box-sizing: content-box;
@@ -237,7 +292,7 @@ data-animstage-3="-translate-y-full delay-400">
   width: 4px;
   height: 16px;
   border-radius: 25%;
-  background-color: #ffbf00;
+  background-color: #fff;
   animation-name: scroll;
   animation-duration: 1s;
   animation-timing-function: cubic-bezier(.15,.41,.69,.94);
