@@ -9,8 +9,8 @@
 	let el:HTMLCanvasElement;
 
 	onMount(async () => {
-        const { init } = await import('$lib/babylon/Landing');
-		init();
+        //const { init } = await import('$lib/babylon/Landing');
+		//init();
 	});
 
 
