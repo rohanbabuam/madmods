@@ -12,6 +12,7 @@ import {
     Scene,
     WebGLRenderer,
     MeshStandardMaterial,
+    MeshBasicMaterial,
     Color,
     FogExp2,
     Fog,
@@ -37,6 +38,7 @@ import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js'
 import("three-mesh-bvh");
 import CustomShaderMaterial from "three-custom-shader-material/vanilla";
 import AutoTyping from '$lib/typewriter/auto.js';
+import type { StandardMaterial } from '@babylonjs/core';
   //CONFIG
   let dev: boolean;
   let camPath:any;
@@ -333,7 +335,13 @@ import AutoTyping from '$lib/typewriter/auto.js';
 
     // Load the compressed GLTF model
     const modelURL = dev? 'models/gltf/Village.glb' : 'https://pub-48572794ea984ea9976e5d5856e58593.r2.dev/static/models/gltf/Village.glb'
-
+    let StandardMaterial:MeshStandardMaterial = new MeshStandardMaterial({
+        flatShading: true,
+        color: 0xffffff,
+        roughness: 0.8,
+        metalness: 0.2
+    });
+    let extractedMat = false;
     gltfLoader.load(
         modelURL, // Replace with your file path
         function (gltf) {
@@ -343,13 +351,20 @@ import AutoTyping from '$lib/typewriter/auto.js';
             // Optional: Adjust position and scale
             model.position.set(0, 0, 0);
             model.scale.set(1, 1, 1);
-
+            // console.log(scene);
             // Optional: Enable shadows
+            let customMatCounter = 0;
             model.traverse((obj) => {
                 let child = (obj as Mesh)
                 if (child.isMesh) {
                     //CustomMaterial.map = child.material.map
                     //child.material = CustomMaterial;
+
+                    if(!extractedMat){
+                        extractedMat = true;
+                        StandardMaterial = child.material.clone();
+                        // console.log(child.material)
+                    }
 
                     if(child.name.includes("hill") ||
                        child.name.includes("Road") || 
@@ -365,52 +380,62 @@ import AutoTyping from '$lib/typewriter/auto.js';
                     if(child.name.includes('hill') || child.name.includes('landscape')){
                         PhasingMats[0].map = child.material.map
                         child.material = PhasingMats[0];
+                        customMatCounter++;
                     }
                     //phase 1 animations
                     if(child.name.includes('mountains')){
                         PhasingMats[1].map = child.material.map
                         child.material = PhasingMats[1];
+                        customMatCounter++;
                     }
                     //phase 2 animations
                     if(child.name.includes('rock')){
                         PhasingMats[2].map = child.material.map
                         child.material = PhasingMats[2];
+                        customMatCounter++;
                     }
                     //phase 3 animations
                     if(child.name.includes('stones')){
                         PhasingMats[3].map = child.material.map
                         child.material = PhasingMats[3];
+                        customMatCounter++;
                     }
                     //phase 4 animations
                     if(child.name.includes('Road')){
                         PhasingMats[4].map = child.material.map
                         child.material = PhasingMats[4];
+                        customMatCounter++;
                     }
                     //phase 5 animations
                     if(child.name.includes('Tree')){
                         PhasingMats[5].map = child.material.map
                         child.material = PhasingMats[5];
+                        customMatCounter++;
                     }
                     //phase 6 animations
                     if(child.name.includes('animal')){
                         PhasingMats[6].map = child.material.map
                         child.material = PhasingMats[6];
+                        customMatCounter++;
                     }
                     //phase 4 animations
                     if(child.name.includes('props')){
                         PhasingMats[7].map = child.material.map
                         child.material = PhasingMats[7];
+                        customMatCounter++;
                     }
                     //phase 4 animations
                     if(child.name.includes('Building') || child.name.includes('building') || child.name.includes('Mesh') ||
                     child.name.includes('foundation') || child.name.includes('Flue')){
                         PhasingMats[8].map = child.material.map
                         child.material = PhasingMats[8];
+                        customMatCounter++;
                     }
                     //phase 4 animations
                     if(child.name.includes('dock')){
                         PhasingMats[9].map = child.material.map
                         child.material = PhasingMats[9];
+                        customMatCounter++;
                     }
                     else if(child.name.includes("water")){
                         child.visible = false;
@@ -436,6 +461,7 @@ import AutoTyping from '$lib/typewriter/auto.js';
                     else{
                         child.castShadow = true;
                     }
+                    
                    //const albedoMap = child.material.map || null;
 
                    //child.material = new THREE.MeshToonMaterial({
@@ -459,6 +485,7 @@ import AutoTyping from '$lib/typewriter/auto.js';
                 //   })
                 //   .start(); 
             });
+            // console.log('customMatCounter = ', customMatCounter)
         },
         function (xhr) {
            // console.log((xhr.loaded / xhr.total * 100) + '% loaded');
@@ -554,14 +581,12 @@ import AutoTyping from '$lib/typewriter/auto.js';
         requestAnimationFrame(animate);
         if(planesMeshA){
             planesMeshA.rotation.y += 0.00004
-        }
-            
+        }   
         csm.update();
         controls.update(); // Required for damping to work
         TWEEN.update();
         renderer.render(scene, camera);
     }
-    animate();
 
     // Handle window resize
     window.addEventListener('resize', () => {
@@ -647,7 +672,7 @@ import AutoTyping from '$lib/typewriter/auto.js';
 
       if(animatingText && currentScroll>10){
         //console.log(currentScroll,newStage,item.currentStage)
-        console.log('finish')
+        // console.log('finish')
         typing.finish();
         animatingText = false;
     }
@@ -668,7 +693,7 @@ import AutoTyping from '$lib/typewriter/auto.js';
             }
             
             // Only update if stage changed
-            console.log(currentScroll,newStage,item.currentStage)
+            // console.log(currentScroll,newStage,item.currentStage)
             if (newStage !== item.currentStage) {
                 if(newStage == 0 && item.element.id == "dummy-promptbox"){
                     //console.log("change-1")
@@ -679,8 +704,12 @@ import AutoTyping from '$lib/typewriter/auto.js';
                 }
                 if(newStage == 1 && item.element.id == "dummy-promptbox"){
                     scrollCounter=1500;
-                    if(!cameraAnimated)
-                    tweenCameraAuto();
+                    if(!cameraAnimated){
+                        animate();
+                        tweenCameraAuto();
+
+                    }
+
                 }
               // First remove all animation classes from previous stages
               animations.forEach((anim:any) => {
@@ -707,7 +736,7 @@ import AutoTyping from '$lib/typewriter/auto.js';
         scrollCounter += event.deltaY;
         scrollStep = scrollCounter/400;
         scrollPercent = scrollStep/20; //clamp(scrollStep/20,0,1.0);
-        console.log('counter, step , percent = ', scrollCounter, scrollStep, scrollPercent);
+        // console.log('counter, step , percent = ', scrollCounter, scrollStep, scrollPercent);
         //phase-1 
 
         // if((scrollStep > 3.5) && (phases[0]!=1) ){
@@ -769,7 +798,7 @@ import AutoTyping from '$lib/typewriter/auto.js';
         //     document.getElementById('scroll-indicator').style.visibility = "hidden";
         // }
         if(scrollPercent<=1.0 && scrollPercent>=0.25 && !controls.enableZoom){
-            console.log('tweening camera')
+            // console.log('tweening camera')
             //tweenCameraTo(camPath.getPointAt(scrollPercent), 2000)
         }
     });
@@ -900,8 +929,41 @@ import AutoTyping from '$lib/typewriter/auto.js';
             controls.enablePan = true;
             controls.enableZoom = true;
             controls.enableRotate = true;     
-            renderer.shadowMap.enabled = true;   
-            document.getElementById('waitlist-container').classList.remove('collapse')
+            controls.rotateSpeed = 0.1;  
+            let c = 0; 
+            document.getElementById('waitlist-container').classList.remove('collapse');
+            scene.traverse((obj:any) => {
+                let child = (obj as Mesh)
+                if (child.isMesh) {
+                    //console.log(child.material)
+                    if(child.material.name.includes('CustomShaderMaterial')){
+                        c++;
+                        if(c < 500){
+                            if(child.name.includes('Mesh')){
+                                //console.log(child);
+                                //child.visible = false
+                            }
+                            if(child.name.includes("hill") ||
+                                child.name.includes("Road") || 
+                                child.name.includes("stones") ||
+                                child.name.includes("mountains") || 
+                                child.name.includes("rock")){
+                                    child.receiveShadow = true;
+                                    child.castShadow = false;
+                                    //child.material.color = new Color( 0xff00ff );
+                            }
+                            // console.log('mat num ', c ,child.name)
+                            child.material = StandardMaterial;
+                            //child.castShadow = false
+
+                        }
+                    }
+                    
+                }
+                
+            });
+            // console.log('c = ', c)
+            renderer.shadowMap.enabled = true;
           })
           .start();
     }
