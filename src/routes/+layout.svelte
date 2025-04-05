@@ -55,7 +55,7 @@ aos opacity-0 transition-opacity duration-500 ease-in-out"
 			  </button>
 		</a>
 
-		<a class="font-medium text-white focus:outline-hidden" href="https://discord.gg/9KQmAPdaq5" aria-current="page">
+		<a class="font-medium text-white focus:outline-hidden" href="https://discord.gg/9KQmAPdaq5" target="_blank" aria-current="page">
 
 			<button type="button" class="py-3 px-4 inline-flex items-center gap-x-2 text-sm font-medium rounded-lg border 
 				border-transparent bg-[#5500aa] opacity-100 text-white/80 hover:text-white focus:outline-hidden focus:opacity-100 

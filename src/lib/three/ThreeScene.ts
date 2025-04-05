@@ -824,6 +824,9 @@ import AutoTyping from '$lib/typewriter/auto.js';
         .yoyo(false)
         .repeat(0)
         .easing(TWEEN.Easing.Quadratic.InOut)
+        .onStart(()=>{
+            cameraAnimated = true;
+        })
         .onUpdate(function (t) {
             //controls.autoRotateSpeed = 12-(time.value/12*10);
             //console.log(t);
@@ -898,7 +901,6 @@ import AutoTyping from '$lib/typewriter/auto.js';
             controls.enableZoom = true;
             controls.enableRotate = true;     
             renderer.shadowMap.enabled = true;   
-            cameraAnimated = true;
             document.getElementById('waitlist-container').classList.remove('collapse')
           })
           .start();

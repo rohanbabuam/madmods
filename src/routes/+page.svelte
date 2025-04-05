@@ -206,7 +206,7 @@ class="absolute z-100"></div> -->
 class = "z-10 border-0 border-red-500 opacity-100 collapse center origin-center">
 	<button id="waitlist-close" 
 	class="
-	flex items-center justify-center opacity-90
+	flex items-center justify-center opacity-60
 	absolute z-200 right-4 top-8 border-4 
 	border-white rounded-full 
 	bg-gray-200 hover:bg-white text-gray-700 shadow-md" onclick={(e)=>{
@@ -250,6 +250,38 @@ class = "z-10 border-0 border-red-500 opacity-100 collapse center origin-center"
 
 
 <style>
+
+#waitlist-container {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    /* Optional styling for modal container */
+    width: 100%;
+    max-width: 500px; /* Adjust as needed */
+    padding: 20px;
+  }
+  
+  #getWaitlistContainer {
+    position: relative; /* This makes it the positioning context for absolute children */
+    width: 100%;
+    height: auto; /* Adjust as needed */
+    background: transparent; /* Just for visualization */
+    border-radius: 8px; /* Optional */
+  }
+  
+  #waitlist-close {
+    position: absolute;
+    top: 48px; /* Adjust to position correctly relative to the box */
+    right: 32px; /* Adjust to position correctly relative to the box */
+    width: 30px;
+    height: 30px;
+    /* background: #ff0000; */
+    border-radius: 50%; /* Makes it circular */
+    cursor: pointer;
+  }
+
+
 	body,html  {
   background-color: #000;
   width: 100%;
