@@ -865,7 +865,8 @@ import type { StandardMaterial } from '@babylonjs/core';
             CloudMaterial.uniforms.opacity.value -= time/10;
             let pos = camPath.getPointAt(time)
             //console.log(pos)
-            camera.position.copy(pos);
+            camera.position.set(pos.x,pos.y,pos.z);
+            controls.update();
 
             if((time > 0.0) && (phases[0]!=1) ){
                 phases[0] = 1;
@@ -929,7 +930,7 @@ import type { StandardMaterial } from '@babylonjs/core';
             controls.enablePan = true;
             controls.enableZoom = true;
             controls.enableRotate = true;     
-            controls.rotateSpeed = 0.1;  
+            controls.rotateSpeed = 0.5;  
             let c = 0; 
             document.getElementById('waitlist-container').classList.remove('collapse');
             scene.traverse((obj:any) => {
