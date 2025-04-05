@@ -36,19 +36,19 @@ data-animstage-3="-translate-y-full delay-400">
 aos transition-all duration-500 ease-in-out"
 data-animstage-3="-translate-y-250 delay-400">
 	<img id="hero-banner" 
-	class="w-1/2 h-auto object-cover
+	class="w-4/10 h-auto object-cover
 	aos transition-all duration-500 ease-in-out" 
 	data-animstage-3="-translate-y-150 opacity-0"
 	src="/logos/madmods-logo6.svg" alt="logo"/>
 
-	<div id="hero-text" class="text-3xl text-center
+	<div id="hero-text" class="text-center
 	aos transition-all duration-500 ease-in-out" 
 	data-animstage-3="-translate-y-150 opacity-0">
-		<h1 class="mb-4 text-4xl font-bold leading-none text-center 
-		w-full tracking-tight text-white md:text-5xl lg:text-8xl dark:text-white">
+		<h1 class="mb-4 font-bold leading-none text-center 
+		w-full tracking-tight text-white text-3xl md:text-5xl lg:text-7xl dark:text-white">
 		Build 3D Worlds in Seconds</h1>
 		<p class="mb-6 
-		 text-white text-center text-2xl font-normal lg:text-5xl 
+		 text-white text-center text-xl font-normal lg:text-4xl 
 		sm:px-16 xl:px-48 dark:white">
 			Play & Share with your Friends Instantly
 	</div>
