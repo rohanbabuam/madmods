@@ -13,6 +13,7 @@ import {
     WebGLRenderer,
     MeshStandardMaterial,
     MeshBasicMaterial,
+    MeshLambertMaterial,
     Color,
     FogExp2,
     Fog,
@@ -25,6 +26,7 @@ import {
     LinearMipMapLinearFilter,
     ShaderMaterial,
     Object3D,
+    AmbientLight
 } from 'three';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -277,7 +279,7 @@ import type { StandardMaterial } from '@babylonjs/core';
 
 
     const CustomMaterial = new CustomShaderMaterial({
-        baseMaterial: MeshStandardMaterial,
+        baseMaterial: MeshLambertMaterial,
         // Your Uniforms
         uniforms: customShaderUniforms,
         vertexShader: /* glsl */ customVertexShader,
@@ -289,7 +291,7 @@ import type { StandardMaterial } from '@babylonjs/core';
     let PhasingMats = [];
     for (let i=0;i<10;i++){
         const phaseMat = new CustomShaderMaterial({
-            baseMaterial: MeshStandardMaterial,
+            baseMaterial: MeshLambertMaterial,
             // Your Uniforms
             uniforms: {...customShaderUniforms, phase:{'value':i}},
             vertexShader: /* glsl */ customVertexShader,
@@ -297,8 +299,8 @@ import type { StandardMaterial } from '@babylonjs/core';
             // Base material properties
             flatShading: true,
             //color: 0xff00ff
-            roughness: 0.8,
-            metalness: 0.2
+            //roughness: 0.8,
+            //metalness: 0.2
         });
         PhasingMats.push(phaseMat);
     }
@@ -335,11 +337,11 @@ import type { StandardMaterial } from '@babylonjs/core';
 
     // Load the compressed GLTF model
     const modelURL = dev? 'models/gltf/Village.glb' : 'https://pub-48572794ea984ea9976e5d5856e58593.r2.dev/static/models/gltf/Village.glb'
-    let StandardMaterial:MeshStandardMaterial = new MeshStandardMaterial({
+    let StandardMaterial:any = new MeshLambertMaterial({
         flatShading: true,
         color: 0xffffff,
-        roughness: 0.8,
-        metalness: 0.2
+        //roughness: 0.8,
+        //metalness: 0.2
     });
     let extractedMat = false;
     gltfLoader.load(
@@ -362,7 +364,7 @@ import type { StandardMaterial } from '@babylonjs/core';
 
                     if(!extractedMat){
                         extractedMat = true;
-                        StandardMaterial = child.material.clone();
+                        StandardMaterial.map = child.material.map;
                         // console.log(child.material)
                     }
 
@@ -526,8 +528,8 @@ import type { StandardMaterial } from '@babylonjs/core';
     renderer.toneMappingExposure = 1;
 
     // Lighting
-    //const ambientLight = new AmbientLight(0x404040, 0);
-    //scene.add(ambientLight);
+    const ambientLight = new AmbientLight(0xffffff, 1);
+    scene.add(ambientLight);
     const directionalLight = new DirectionalLight(0xffffff, 0);
     directionalLight.position.set(50, 100, 75);
     directionalLight.castShadow = false;
@@ -939,7 +941,7 @@ import type { StandardMaterial } from '@babylonjs/core';
                     //console.log(child.material)
                     if(child.material.name.includes('CustomShaderMaterial')){
                         c++;
-                        if(c < 500){
+                        if(c > -1){
                             if(child.name.includes('Mesh')){
                                 //console.log(child);
                                 //child.visible = false
