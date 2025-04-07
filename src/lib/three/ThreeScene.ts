@@ -40,7 +40,6 @@ import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js'
 import("three-mesh-bvh");
 import CustomShaderMaterial from "three-custom-shader-material/vanilla";
 import AutoTyping from '$lib/typewriter/auto.js';
-import type { StandardMaterial } from '@babylonjs/core';
   //CONFIG
   let dev: boolean;
   let camPath:any;
@@ -161,12 +160,12 @@ import type { StandardMaterial } from '@babylonjs/core';
     
     // Scene setup
     const scene = new Scene();
-    const camera = new PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100000);
-
+    
     const renderer = new WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
-
+    
+    const camera = new PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100000);
     //fog
     //scene.fog = new FogExp2( 0xccdbdf, 0.00 );
 
@@ -675,8 +674,9 @@ import type { StandardMaterial } from '@babylonjs/core';
       if(animatingText && currentScroll>10){
         //console.log(currentScroll,newStage,item.currentStage)
         // console.log('finish')
-        typing.finish();
-        animatingText = false;
+        //typing.finish();
+        //animatingText = false;
+        return;
     }
 
       //console.log(currentScroll)
@@ -704,7 +704,7 @@ import type { StandardMaterial } from '@babylonjs/core';
                     typing.start();
                     animatingText = true;
                 }
-                if(newStage == 1 && item.element.id == "dummy-promptbox"){
+                else if(newStage == 1 && item.element.id == "dummy-promptbox"){
                     scrollCounter=1500;
                     if(!cameraAnimated){
                         animate();
@@ -799,10 +799,6 @@ import type { StandardMaterial } from '@babylonjs/core';
 
         //     document.getElementById('scroll-indicator').style.visibility = "hidden";
         // }
-        if(scrollPercent<=1.0 && scrollPercent>=0.25 && !controls.enableZoom){
-            // console.log('tweening camera')
-            //tweenCameraTo(camPath.getPointAt(scrollPercent), 2000)
-        }
     });
 
     //Touch support for mobile
