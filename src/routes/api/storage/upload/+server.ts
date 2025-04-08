@@ -57,6 +57,29 @@ export async function POST(event: RequestEvent) {
     });
     console.log("File successfully uploaded to R2.");
 
+    let whitelistedOrigins = [
+		'app://-',
+		'https://localhost:5173',
+		'https://127.0.0.1:5173',
+		'http://localhost:5173',
+		'http://127.0.0.1:5173',
+	];
+
+	let showOrigin: string = 'http://localhost:5173';
+
+	let requestOrigin = event.request.headers.get('Origin')?.toString();
+
+	if (requestOrigin && whitelistedOrigins.includes(requestOrigin)) {
+		showOrigin = requestOrigin;
+	}
+	// console.log(event.url.href);
+	console.log(showOrigin);
+    let headers =  {
+        'content-type': 'text/plain; charset=UTF-8',
+        'Access-Control-Allow-Origin': showOrigin,
+        vary: showOrigin,
+    }
+
     // --- 10. Return Success Response ---
     let response = new Response(JSON.stringify({
         message: 'File generated and stored successfully!',
@@ -65,10 +88,7 @@ export async function POST(event: RequestEvent) {
     }),
     {
         status: 201,
-        headers: {
-            'content-type': 'text/plain; charset=UTF-8',
-            'Access-Control-Allow-Origin' : 'http://localhost:5173'
-        },
+        headers: headers
     });
 
     return response;
