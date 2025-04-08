@@ -71,9 +71,5 @@ export async function POST(event: RequestEvent) {
         },
     });
 
-    return json({
-        message: 'File generated and stored successfully!',
-        r2Key: r2key,
-        publicUrl: `https://pub-48572794ea984ea9976e5d5856e58593.r2.dev/${r2key}` // If applicable
-    }, { status: 201 });
+    return response;
 }
