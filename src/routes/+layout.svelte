@@ -36,7 +36,7 @@ aos opacity-0 transition-opacity duration-500 ease-in-out"
   </div>
   <div id="hs-navbar-example" class="hidden hs-collapse overflow-hidden transition-all duration-300 basis-full grow sm:block" aria-labelledby="hs-navbar-example-collapse">
 	<div class="flex flex-col gap-5 mt-5 sm:flex-row sm:items-center sm:justify-end sm:mt-0 sm:ps-5">
-		<a class="font-medium text-white focus:outline-hidden" href="#" aria-current="page">
+		<div class="font-medium text-white focus:outline-hidden">
 
 			<button type="button" class="py-3 px-4 inline-flex items-center gap-x-2 text-sm font-medium rounded-lg border 
 				border-transparent bg-[#5500aa] opacity-100 text-white/80 hover:text-white focus:outline-hidden focus:opacity-100 
@@ -53,7 +53,7 @@ aos opacity-0 transition-opacity duration-500 ease-in-out"
 				}}>
 				Join Waitlist
 			  </button>
-		</a>
+		</div>
 
 		<a class="font-medium text-white focus:outline-hidden" href="https://discord.gg/9KQmAPdaq5" target="_blank" aria-current="page">
 
