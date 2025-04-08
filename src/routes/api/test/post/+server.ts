@@ -23,10 +23,6 @@ export function POST(event: RequestEvent) {
 	console.log(showOrigin);
 
 	return new Response(JSON.stringify(showOrigin), {
-		status: 200,
-		headers: {
-			'Access-Control-Allow-Origin': showOrigin,
-			vary: showOrigin,
-		},
+		status: 200
 	});
 }
