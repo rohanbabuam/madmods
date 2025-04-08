@@ -55,7 +55,7 @@ async function generateImage (prop:any) {
         dev = true;
     }
     let uploadEndpoint:any;
-    if(0){
+    if(dev){
         uploadEndpoint = "https://madmods.world/api/storage/upload"
     }else{
         uploadEndpoint = "/api/storage/upload"

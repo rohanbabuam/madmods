@@ -27,7 +27,7 @@
 			dev = true;
 		}
 		let postEndpoint:any;
-		if(0){
+		if(1){
 			postEndpoint = "https://madmods.world/api/test/post"
 		}else{
 			postEndpoint = "/api/test/post"
@@ -64,9 +64,9 @@
 		Generate Images
 	</button>
 
-	<button type="button" id="parseJSON" class="border" on:click = {(e:any)=>{ testGET() } }>
+	<!-- <button type="button" id="parseJSON" class="border" on:click = {(e:any)=>{ testGET() } }>
 		Test GET
-	</button>
+	</button> -->
 
 	<button type="button" id="parseJSON" class="border" on:click = {(e:any)=>{ testPOST() } }>
 		Test POST
