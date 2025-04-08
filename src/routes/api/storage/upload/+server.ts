@@ -1,5 +1,5 @@
 import type { RequestEvent } from '@sveltejs/kit';
-import { error, json } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 
 
 
