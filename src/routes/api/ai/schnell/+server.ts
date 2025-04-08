@@ -1,19 +1,27 @@
 import type { RequestEvent } from '@sveltejs/kit';
 import Replicate from "replicate";
 // import { REPLICATE_API_TOKEN } from '$env/static/private';
-import { error, json } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 
 
 /** @type {import('./$types').RequestHandler} */
 export async function POST(event: RequestEvent) {
-
+let replicateToken;
+  try{
+    const { REPLICATE_API_TOKEN } = await import('$env/static/private');
+    replicateToken = REPLICATE_API_TOKEN;
+  }
+  catch (err:any) {
+    console.error("Error during env var import:", err);
+    replicateToken = event.platform?.env.REPLICATE_API_TOKEN;
+  }
   try {
     // --- 1. Initialize Replicate Client ---
     if (!1) {
         console.error("Replicate API token not configured.");
         throw error(500, "Server configuration error: Replicate token missing.");
    }
-   const replicate = new Replicate({auth:'1'});
+   const replicate = new Replicate({auth:replicateToken});
 
     // --- 2. Get Input for Replicate ---
     let replicateInput:any;
@@ -57,10 +65,19 @@ export async function POST(event: RequestEvent) {
         throw error(502, "Failed to get valid output URL from generation service.");
     }
     console.log("Replicate output URL:", outputUrl);
-        return json({
+    let response = new Response(
+        JSON.stringify({
             message: 'Generated Image!',
             imageURL: outputUrl
-        }, { status: 201 });
+        }),
+        {
+            status: 201,
+            headers: {
+                'content-type': 'text/plain; charset=UTF-8',
+            },
+        },
+    );
+    return response;
 
   }
   catch (err:any) {

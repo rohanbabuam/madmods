@@ -1,12 +1,22 @@
 import type { RequestEvent } from '@sveltejs/kit';
 import { GoogleGenAI } from "@google/genai";
 // import { PRIVATE_GEMINI_API_KEY } from '$env/static/private';
-import { error, json } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 
 /** @type {import('./$types').RequestHandler} */
 export async function POST(event: RequestEvent) {
 
   let requestData:any;
+
+  let geminiToken;
+  try{
+    const { PRIVATE_GEMINI_API_KEY } = await import('$env/static/private');
+    geminiToken = PRIVATE_GEMINI_API_KEY;
+  }
+  catch (err:any) {
+    console.error("Error during env var import:", err);
+    geminiToken = event.platform?.env.PRIVATE_GEMINI_API_KEY;
+  }
 
   try {
       requestData = await event.request.json();
@@ -20,7 +30,7 @@ export async function POST(event: RequestEvent) {
 
   try {
 
-    const ai = new GoogleGenAI({ apiKey: 'PRIVATE_GEMINI_API_KEY' });
+    const ai = new GoogleGenAI({ apiKey: geminiToken });
     const response = await ai.models.generateContentStream({
       model: "gemini-2.5-pro-exp-03-25",
       contents: requestData.inputText,
