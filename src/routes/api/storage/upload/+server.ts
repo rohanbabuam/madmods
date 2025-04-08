@@ -30,17 +30,17 @@ export async function POST(event: RequestEvent) {
 
     // --- 3. Fetch the File from the URL ---
     console.log("Fetching file from fileURL...");
-    const response = await fetch(fileURL_toUpload);
+    const fetchResponse = await fetch(fileURL_toUpload);
 
-    if (!response.ok) {
-        console.error(`Failed to fetch file from ${fileURL_toUpload}. Status: ${response.status} ${response.statusText}`);
-        const errorBody = await response.text().catch(() => 'Could not read error body');
-        throw error(502, `Failed to download generated file: ${response.statusText}. Body: ${errorBody}`);
+    if (!fetchResponse.ok) {
+        console.error(`Failed to fetch file from ${fileURL_toUpload}. Status: ${fetchResponse.status} ${fetchResponse.statusText}`);
+        const errorBody = await fetchResponse.text().catch(() => 'Could not read error body');
+        throw error(502, `Failed to download generated file: ${fetchResponse.statusText}. Body: ${errorBody}`);
     }
 
     // --- 4. Get File Data and Metadata ---
-    const fileData = await response.arrayBuffer(); // Get content as ArrayBuffer
-    const contentType = response.headers.get('content-type') || 'application/octet-stream';
+    const fileData = await fetchResponse.arrayBuffer(); // Get content as ArrayBuffer
+    const contentType = fetchResponse.headers.get('content-type') || 'application/octet-stream';
 
     // --- 5. Generate a Unique Key/Filename for R2 ---
     //const uniqueId = crypto.randomUUID();
@@ -58,6 +58,19 @@ export async function POST(event: RequestEvent) {
     console.log("File successfully uploaded to R2.");
 
     // --- 10. Return Success Response ---
+    let response = new Response(JSON.stringify({
+        message: 'File generated and stored successfully!',
+        r2Key: r2key,
+        publicUrl: `https://pub-48572794ea984ea9976e5d5856e58593.r2.dev/${r2key}` // If applicable
+    }),
+    {
+        status: 201,
+        headers: {
+            'content-type': 'text/plain; charset=UTF-8',
+            'Access-Control-Allow-Origin' : 'http://localhost:5173'
+        },
+    });
+
     return json({
         message: 'File generated and stored successfully!',
         r2Key: r2key,

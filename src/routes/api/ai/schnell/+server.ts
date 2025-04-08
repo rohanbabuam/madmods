@@ -46,10 +46,11 @@ export async function POST(event: RequestEvent) {
       };
 
     // --- 3. Run the Replicate Model ---
-    const outputObject:any = await replicate.run("black-forest-labs/flux-schnell", { input });
+    const [outputObject] = await replicate.run("black-forest-labs/flux-schnell", { input });
 
     // --- 4. Extract the File URL ---
     // Use optional chaining (?.) for safety in case url() or href is missing
+    console.log(outputObject)
     const outputUrl = outputObject?.url?.().href;
     if (!outputUrl || typeof outputUrl !== 'string') {
         console.error("Replicate did not return a valid output object with a .url().href property:", outputObject);
