@@ -75,9 +75,10 @@ export async function POST(event: RequestEvent) {
 	// console.log(event.url.href);
 	console.log(showOrigin);
     let headers =  {
-        'content-type': 'text/plain; charset=UTF-8',
-        'Access-Control-Allow-Origin': showOrigin,
-        vary: showOrigin,
+        'Content-Type': 'text/plain; charset=UTF-8',
+        'Access-Control-Allow-Origin': 'http://localhost:5173',
+        'Access-Control-Allow-Methods': 'POST',
+        'Access-Control-Allow-Headers': 'Content-Type'
     }
 
     // --- 10. Return Success Response ---
