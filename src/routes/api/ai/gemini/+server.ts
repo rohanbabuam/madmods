@@ -1,7 +1,6 @@
 import type { RequestEvent } from '@sveltejs/kit';
 import { GoogleGenAI } from "@google/genai";
-import { PRIVATE_GEMINI_API_KEY } from '$env/static/private';
-import { PRIVATE_GEMINI_SYSTEM_PROMPT } from '$env/static/private';
+// import { PRIVATE_GEMINI_API_KEY } from '$env/static/private';
 import { error, json } from '@sveltejs/kit';
 
 /** @type {import('./$types').RequestHandler} */
@@ -21,7 +20,7 @@ export async function POST(event: RequestEvent) {
 
   try {
 
-    const ai = new GoogleGenAI({ apiKey: PRIVATE_GEMINI_API_KEY });
+    const ai = new GoogleGenAI({ apiKey: 'PRIVATE_GEMINI_API_KEY' });
     const response = await ai.models.generateContentStream({
       model: "gemini-2.5-pro-exp-03-25",
       contents: requestData.inputText,

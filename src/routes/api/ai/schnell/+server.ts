@@ -1,6 +1,6 @@
 import type { RequestEvent } from '@sveltejs/kit';
 import Replicate from "replicate";
-import { REPLICATE_API_TOKEN } from '$env/static/private';
+// import { REPLICATE_API_TOKEN } from '$env/static/private';
 import { error, json } from '@sveltejs/kit';
 
 
@@ -9,11 +9,11 @@ export async function POST(event: RequestEvent) {
 
   try {
     // --- 1. Initialize Replicate Client ---
-    if (!REPLICATE_API_TOKEN) {
+    if (!1) {
         console.error("Replicate API token not configured.");
         throw error(500, "Server configuration error: Replicate token missing.");
    }
-   const replicate = new Replicate({auth:REPLICATE_API_TOKEN});
+   const replicate = new Replicate({auth:'1'});
 
     // --- 2. Get Input for Replicate ---
     let replicateInput:any;
