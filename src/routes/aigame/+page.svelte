@@ -27,7 +27,7 @@
 			dev = true;
 		}
 		let postEndpoint:any;
-		if(1){
+		if(0){
 			postEndpoint = "https://madmods.world/api/test/post"
 		}else{
 			postEndpoint = "/api/test/post"

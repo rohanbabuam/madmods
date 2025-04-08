@@ -1,4 +1,5 @@
 import type { RequestEvent } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 
 /** @type {import('./$types').RequestHandler} */
 export function POST(event: RequestEvent) {
@@ -17,10 +18,17 @@ export function POST(event: RequestEvent) {
 	let requestOrigin = event.request.headers.get('Origin')?.toString();
 
 	if (requestOrigin && whitelistedOrigins.includes(requestOrigin)) {
-		showOrigin = requestOrigin;
+		showOrigin = 'showOrigin = ' + requestOrigin;
 	}
 	// console.log(event.url.href);
-	console.log(showOrigin);
+	console.log("showOrigin = ", showOrigin);
+
+	// --- 1. Check for R2 Binding ---
+		if (!event.platform?.env.MADMODS_R2) {
+			console.error("R2 binding 'MADMODS_R2' not found.");
+			throw error(500, "Server configuration error: R2 bucket not available.");
+		}
+	const bucket = event.platform?.env.MADMODS_R2;
 
 	return new Response(JSON.stringify(showOrigin), {
 		status: 200
