@@ -18,7 +18,7 @@ export async function POST(event: RequestEvent) {
 	let requestOrigin = event.request.headers.get('Origin')?.toString();
 
 	if (requestOrigin && whitelistedOrigins.includes(requestOrigin)) {
-		showOrigin = 'showOrigin = ' + requestOrigin;
+		showOrigin = requestOrigin;
 	}
 	// console.log(event.url.href);
 	console.log("showOrigin = ", showOrigin);

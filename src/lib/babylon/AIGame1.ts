@@ -63,6 +63,7 @@ async function generateImage (prop:any) {
 
     console.log(uploadEndpoint)
     const uploadResult = await fetch(uploadEndpoint, {
+        mode: 'cors',
         method: 'POST',
         body: JSON.stringify(uploadObject)
     });
