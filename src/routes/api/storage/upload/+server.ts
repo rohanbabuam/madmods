@@ -46,7 +46,7 @@ export async function POST(event: RequestEvent) {
     //const uniqueId = crypto.randomUUID();
     
 
-    // --- 9. Write the File to R2 ---
+    // --- 6. Write the File to R2 ---
     console.log(`Uploading file to R2 with key: ${r2key} and Content-Type: ${contentType}`);
     await bucket.put(r2key, fileData, {
             httpMetadata: {
@@ -81,7 +81,7 @@ export async function POST(event: RequestEvent) {
         'Access-Control-Allow-Headers': 'Content-Type'
     }
 
-    // --- 10. Return Success Response ---
+    // --- 7. Return Success Response ---
     let response = new Response(JSON.stringify({
         message: 'File generated and stored successfully!',
         r2Key: r2key,

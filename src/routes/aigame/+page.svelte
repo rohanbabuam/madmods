@@ -27,7 +27,12 @@
 			dev = true;
 		}
 		let postEndpoint:any;
-		if(0){
+		let uploadObject = {
+			'fileURL_toUpload' : 'https://replicate.delivery/xezq/cOhjxtTbDeTbTaOhqiGBLtifBu4UYt2ejrfGRkbes5t9eFPIF/out-0.jpg',
+			'r2key' : 'worlds/testuser/world1/props/dino1.jpg'
+		}
+
+		if(dev){
 			postEndpoint = "https://madmods.world/api/test/post"
 		}else{
 			postEndpoint = "/api/test/post"
@@ -35,6 +40,7 @@
 
 		const PostResult:any = await fetch(postEndpoint, {
 			method: 'POST',
+			body: JSON.stringify(uploadObject)
 		});
 		const uploadResultJSON = await PostResult.json()
 		let uploadFileResponse = JSON.stringify(uploadResultJSON);
