@@ -16,7 +16,9 @@
 
 	async function genImages(){
 		console.log('generating images')
-		await generateImages(sceneData);
+		console.log([sceneData[0]])
+		let sceneData0 = [sceneData[0]];
+		await generateImages(sceneData0);
 	}
 
 	async function testPOST(){
@@ -83,6 +85,13 @@
 	<button type="button" id="parseJSON" class="border" on:click = {(e:any)=>{ testPOST() } }>
 		Test POST
 	</button>
+</div>
+
+<div class="h-screen w-full border-2 border-red-500">
+1
+</div>
+<div class="h-screen w-full border-2 border-red-500">
+	2
 </div>
 
 
