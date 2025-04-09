@@ -64,7 +64,7 @@ export interface ProcessResult {
  * Parses the response and returns a structured ApiResponse.
  * Does NOT handle retries; signals 'rate_limit' errorType if 429 is received.
  */
-export async function callGenerateAndUploadImageApi(payload: ImageGenPayload): Promise<ApiResponse<{ r2Key: string; publicUrl: string }>> {
+async function callGenerateAndUploadImageApi(payload: ImageGenPayload): Promise<ApiResponse<{ r2Key: string; publicUrl: string }>> {
     const endpoint = '/api/ai/generateImage'; // Ensure this matches your actual endpoint name
     console.log(`[API Call] POST ${endpoint} for prop: ${payload.propID}`);
     try {
@@ -110,7 +110,7 @@ export async function callGenerateAndUploadImageApi(payload: ImageGenPayload): P
  * Does NOT handle retries; signals 'rate_limit' errorType if 429 is received.
  * Expects payload with imagePublicUrl.
  */
-export async function callGenerateAndUploadModelApi(payload: ModelGenPayload): Promise<ApiResponse<{ modelR2Key: string; modelPublicUrl: string }>> {
+async function callGenerateAndUploadModelApi(payload: ModelGenPayload): Promise<ApiResponse<{ r2Key: string; publicUrl: string }>> {
     const endpoint = '/api/ai/generateModel'; // Ensure this matches your actual endpoint name
      console.log(`[API Call] POST ${endpoint} for prop: ${payload.propID}, image URL: ${payload.imagePublicUrl}`); // Log public URL
     try {
@@ -151,9 +151,133 @@ export async function callGenerateAndUploadModelApi(payload: ModelGenPayload): P
 
 // --- Orchestration Logic ---
 
+// Track last API call times for rate limiting
+let lastImageApiCallTime = 0;
+let lastModelApiCallTime = 0;
+
+async function processSingleSceneProp(
+    prop: SceneProp,
+    index: number,
+    sceneDataLength: number,
+    userID: string,
+    worldID: string,
+    onProgress?: (index: number, total: number, stage: 'image' | 'model', propName: string, status: string) => void
+): Promise<ProcessResult> {
+    const updateProgress = (stage: 'image' | 'model', status: string) => {
+        if (onProgress) onProgress(index, sceneDataLength, stage, prop.name, status);
+    };
+
+    let imageResult: ApiResponse<{ r2Key: string; publicUrl: string }> | null = null;
+    let modelResult: ApiResponse<{ r2Key: string; publicUrl: string }> | null = null;
+    let processResult: ProcessResult = { propName: prop.name, status: 'image_failed' }; // Initial status
+
+    // --- Image Generation Stage ---
+    updateProgress('image', 'starting');
+    let imageRetries = 0;
+    while (imageRetries <= MAX_RETRIES) {
+        updateProgress('image', `attempt_${imageRetries + 1}`);
+
+        // Rate Limit Delay for Image API
+        const now = Date.now();
+        const timeSinceLastImageCall = now - lastImageApiCallTime;
+        const delayNeededForImage = Math.max(0, MIN_IMAGE_INTERVAL_MS - timeSinceLastImageCall);
+        if (delayNeededForImage > 0) {
+            await delay(delayNeededForImage);
+        }
+        lastImageApiCallTime = Date.now(); // Update time immediately before the call
+
+        imageResult = await callGenerateAndUploadImageApi({
+            inputPrompt: prop.description, userID, worldID, propID: prop.name, imageFormat: 'jpg'
+        });
+
+        if (imageResult.success) {
+            updateProgress('image', 'attempt_success');
+            break; // Image success, proceed to model
+        } else if (imageResult.errorType === 'rate_limit' && imageRetries < MAX_RETRIES) {
+            imageRetries++;
+            updateProgress('image', `rate_limit_retry_${imageRetries}`);
+            console.log(`   Image rate limit for ${prop.name}. Retrying (${imageRetries}/${MAX_RETRIES}) after ${RETRY_DELAY_MS / 1000}s...`);
+            await delay(RETRY_DELAY_MS);
+        } else {
+            updateProgress('image', `attempt_failed (${imageResult.errorType || 'unknown'})`);
+            processResult = {
+                propName: prop.name,
+                status: 'image_failed',
+                error: imageResult?.error,
+                errorDetails: imageResult?.details
+            };
+            console.error(`[Orchestrator] Image stage failed for ${prop.name}: ${imageResult?.error}`);
+            return processResult; // Image failed, stop processing this prop
+        }
+    }
+
+    if (imageResult?.success) {
+        updateProgress('image', 'image_stage_success');
+        processResult = {
+            propName: prop.name,
+            status: 'success', // Interim success, might be downgraded by model stage
+            imageR2Key: imageResult.data!.r2Key,
+            imagePublicUrl: imageResult.data!.publicUrl,
+        };
+
+        // --- Model Generation Stage ---
+        updateProgress('model', 'starting');
+        let modelRetries = 0;
+        while (modelRetries <= MAX_RETRIES) {
+            updateProgress('model', `attempt_${modelRetries + 1}`);
+
+            // Rate Limit Delay for Model API
+            const now = Date.now();
+            const timeSinceLastModelCall = now - lastModelApiCallTime;
+            const delayNeededForModel = Math.max(0, MIN_MODEL_INTERVAL_MS - timeSinceLastModelCall);
+            if (delayNeededForModel > 0) {
+                await delay(delayNeededForModel);
+            }
+            lastModelApiCallTime = Date.now(); // Update time immediately before call
+
+            modelResult = await callGenerateAndUploadModelApi({
+                imagePublicUrl: imageResult.data!.publicUrl,
+                userID,
+                worldID,
+                propID: prop.name
+            });
+
+            if (modelResult.success) {
+                updateProgress('model', 'attempt_success');
+                break; // Model success
+            } else if (modelResult.errorType === 'rate_limit' && modelRetries < MAX_RETRIES) {
+                modelRetries++;
+                updateProgress('model', `rate_limit_retry_${modelRetries}`);
+                console.log(`   Model rate limit for ${prop.name}. Retrying (${modelRetries}/${MAX_RETRIES}) after ${RETRY_DELAY_MS / 1000}s...`);
+                await delay(RETRY_DELAY_MS);
+            } else {
+                updateProgress('model', `attempt_failed (${modelResult.errorType || 'unknown'})`);
+                processResult.status = 'model_failed'; // Downgrade status
+                processResult.error = modelResult?.error;
+                processResult.errorDetails = modelResult?.details;
+                console.error(`[Orchestrator] Model stage failed for ${prop.name}: ${modelResult?.error}`);
+                return processResult; // Model failed, return current result (image might be successful)
+            }
+        }
+
+        if (modelResult?.success) {
+            updateProgress('model', 'model_stage_success');
+            processResult.modelR2Key = modelResult.data!.r2Key;
+            processResult.modelPublicUrl = modelResult.data!.publicUrl;
+            processResult.status = 'success'; // Overall success
+        } else if (processResult.status !== 'model_failed') {
+            processResult.status = 'model_failed'; // Ensure status is model_failed if model stage failed after image success
+        }
+    }
+
+    return processResult;
+}
+
+
 /**
  * Processes a list of scene props by calling backend APIs for image and model generation/upload.
  * Manages rate limiting between calls and handles retries for rate limit errors (429) from the APIs.
+ * Calls APIs asynchronously and in parallel for each prop.
  *
  * @param sceneData Array of prop objects to process.
  * @param userID Current user ID.
@@ -168,213 +292,33 @@ export async function processSceneData(
     onProgress?: (index: number, total: number, stage: 'image' | 'model', propName: string, status: string) => void
 ): Promise<ProcessResult[]> {
 
-    console.log(`Starting processing for ${sceneData.length} props...`);
-    // Initialize results array with nulls to maintain order
-    const results: (ProcessResult | null)[] = new Array(sceneData.length).fill(null);
-    // Create a queue of items with their original index
-    const itemsToProcess: { prop: SceneProp; index: number }[] = sceneData.map((prop, index) => ({ prop, index }));
+    console.log(`Starting parallel processing for ${sceneData.length} props...`);
+    const processPromises = sceneData.map((prop, index) =>
+        processSingleSceneProp(prop, index, sceneData.length, userID, worldID, onProgress)
+    );
 
-    let globalImageSuccessCount = 0;
-    let globalModelSuccessCount = 0;
+    const results = await Promise.all(processPromises);
+    console.log(`\n--- Parallel Processing Complete ---`);
 
-    // --- Stage 1: Image Generation & Upload (Orchestrated Retries & Rate Limit) ---
-    console.log(`\n--- Stage 1: Image Generation & Upload (Rate: ${IMAGE_GENERATION_RATE_PER_SEC}/sec, Retries: ${MAX_RETRIES}) ---`);
+    let overallSuccessCount = 0;
+    let imageFailCount = 0;
+    let modelFailCount = 0;
 
-    // Corrected: Queue now stores imagePublicUrl needed for the next step
-    const modelQueue: { prop: SceneProp; index: number; imagePublicUrl: string }[] = [];
-
-    for (let i = 0; i < itemsToProcess.length; i++) {
-        const { prop, index } = itemsToProcess[i];
-        const stageStartTime = Date.now(); // Track time for rate limiting delay calculation
-
-        // Helper for progress reporting
-        const baseProgressArgs: [number, number, 'image', string, string] = [index, sceneData.length, 'image', prop.name, 'starting'];
-        const updateProgress = (status: string) => {
-            baseProgressArgs[4] = status; // Update the status part
-            if (onProgress) onProgress(...baseProgressArgs); // Call the callback if provided
-        };
-
-        updateProgress('starting');
-
-        let imageResult: ApiResponse<{ r2Key: string; publicUrl: string }>;
-        let imageRetries = 0;
-
-        // Retry loop specifically for the image generation API call for this item
-        while (imageRetries <= MAX_RETRIES) {
-             updateProgress(`attempt_${imageRetries + 1}`); // e.g., "attempt_1", "attempt_2"
-             // Call the utility function that makes the single API request
-            imageResult = await callGenerateAndUploadImageApi({
-                inputPrompt: prop.description, userID, worldID, propID: prop.name, imageFormat: 'jpg'
-            });
-
-            if (imageResult.success) {
-                 updateProgress('attempt_success');
-                 break; // Successful call, exit the retry loop
-            } else if (imageResult.errorType === 'rate_limit' && imageRetries < MAX_RETRIES) {
-                 // It's a rate limit error, and we haven't exceeded max retries
-                 imageRetries++;
-                 updateProgress(`rate_limit_retry_${imageRetries}`);
-                console.log(`   Image rate limit for ${prop.name}. Retrying (${imageRetries}/${MAX_RETRIES}) after ${RETRY_DELAY_MS / 1000}s...`);
-                await delay(RETRY_DELAY_MS); // Wait before the next attempt
-                // Continue to the next iteration of the while loop
-            } else {
-                // Failure condition: Either a non-retryable error OR max retries exceeded for rate limit
-                 updateProgress(`attempt_failed (${imageResult.errorType || 'unknown'})`);
-                 break; // Exit the retry loop on failure
-            }
-        } // End Image retry loop for this item
-
-
-        // Process the final outcome of the image stage (after potential retries)
-        if (!imageResult!.success) {
-            // Store the failure result
-            results[index] = { propName: prop.name, status: 'image_failed', error: imageResult!.error, errorDetails: imageResult!.details };
-             updateProgress('image_stage_failed'); // Final status update for image stage
-             console.error(`[Orchestrator] Image stage failed for ${prop.name}: ${imageResult!.error}`);
-        } else {
-            // Image stage succeeded
-            globalImageSuccessCount++;
-            updateProgress('image_stage_success'); // Final status update
-            const partialResult: ProcessResult = {
-                propName: prop.name,
-                status: 'success', // Mark as success *so far*
-                imageR2Key: imageResult!.data!.r2Key,
-                imagePublicUrl: imageResult!.data!.publicUrl, // Store both R2Key and PublicUrl if needed later
-            };
-            results[index] = partialResult; // Store the intermediate success
-            // Corrected: Push required data to modelQueue
-            modelQueue.push({
-                prop,
-                index,
-                imagePublicUrl: partialResult.imagePublicUrl! // Only need public URL for next API call
-            });
+    results.forEach(result => {
+        if (result.status === 'success') {
+            overallSuccessCount++;
+        } else if (result.status === 'image_failed') {
+            imageFailCount++;
+        } else if (result.status === 'model_failed') {
+            modelFailCount++;
         }
+    });
 
-        // Inter-Item Rate Limiting Delay for Image Stage
-        // Apply delay *after* processing an item (including its retries) to control the start rate of the *next* item.
-        if (i < itemsToProcess.length - 1) { // Don't delay after the last item
-            const stageDuration = Date.now() - stageStartTime; // Time taken for this item's image stage
-            const delayNeeded = Math.max(0, MIN_IMAGE_INTERVAL_MS - stageDuration); // Calculate required delay
-            if (delayNeeded > 0) {
-                 console.log(`   Image stage took ${stageDuration}ms. Waiting ${delayNeeded.toFixed(0)}ms before next item...`);
-                 await delay(delayNeeded);
-            } else {
-                 console.log(`   Image stage took ${stageDuration}ms (>= ${MIN_IMAGE_INTERVAL_MS}ms interval). Proceeding immediately.`);
-                 // Optional: await delay(1); // Tiny delay to yield event loop if operations are very fast
-            }
-        }
-    } // End loop through itemsToProcess (Image Stage)
-    console.log(`--- Image Stage Complete: ${globalImageSuccessCount} / ${sceneData.length} successful ---`);
-
-
-    // --- Stage 2: Model Generation & Upload (Orchestrated Retries & Rate Limit) ---
-    console.log(`\n--- Stage 2: Model Generation & Upload (Rate: ${MODEL_GENERATION_RATE_PER_SEC}/sec, Retries: ${MAX_RETRIES}) ---`);
-    if (modelQueue.length === 0) {
-        console.log("No items succeeded in image stage, skipping model generation.");
-    } else {
-         console.log(`Attempting model generation for ${modelQueue.length} props...`);
-    }
-
-    // Process only the items that succeeded in the image stage
-    for (let i = 0; i < modelQueue.length; i++) {
-        // Corrected: Destructure imagePublicUrl from the queue item
-        const { prop, index, imagePublicUrl } = modelQueue[i];
-        const stageStartTime = Date.now(); // Track time for rate limiting
-
-        // Setup progress reporting for the model stage
-        const baseProgressArgs: [number, number, 'model', string, string] = [index, sceneData.length, 'model', prop.name, 'starting'];
-         const updateProgress = (status: string) => {
-            baseProgressArgs[4] = status;
-            if (onProgress) onProgress(...baseProgressArgs);
-        };
-
-        updateProgress('starting');
-
-        let modelResult: ApiResponse<{ modelR2Key: string; modelPublicUrl: string }>;
-        let modelRetries = 0;
-
-        // Retry loop specifically for the model generation API call for this item
-        while (modelRetries <= MAX_RETRIES) {
-            updateProgress(`attempt_${modelRetries + 1}`);
-             // Corrected: Pass imagePublicUrl in the payload to the API utility function
-            modelResult = await callGenerateAndUploadModelApi({
-                imagePublicUrl: imagePublicUrl, // Use the destructured variable
-                userID,
-                worldID,
-                propID: prop.name
-            });
-
-            if (modelResult.success) {
-                 updateProgress('attempt_success');
-                break; // Success, exit retry loop
-            } else if (modelResult.errorType === 'rate_limit' && modelRetries < MAX_RETRIES) {
-                // Rate limited, more retries available
-                modelRetries++;
-                updateProgress(`rate_limit_retry_${modelRetries}`);
-                console.log(`   Model rate limit for ${prop.name}. Retrying (${modelRetries}/${MAX_RETRIES}) after ${RETRY_DELAY_MS / 1000}s...`);
-                await delay(RETRY_DELAY_MS); // Wait
-                // Continue loop
-            } else {
-                 // Failure (non-retryable or max retries hit)
-                 updateProgress(`attempt_failed (${modelResult.errorType || 'unknown'})`);
-                break; // Exit loop on failure
-            }
-        } // End Model retry loop for this item
-
-
-        // Process the final outcome of the model stage
-        // We need to update the existing result object stored at the original index
-        const finalResult = results[index];
-        if (!finalResult) {
-             console.error(`[Orchestrator Error] Result object for index ${index} (prop ${prop.name}) is unexpectedly null!`);
-             continue; // Should not happen if initialized correctly
-        }
-
-        if (!modelResult!.success) {
-            // Model stage failed, update the status and error fields
-             finalResult.status = 'model_failed'; // Downgrade overall status
-             finalResult.error = modelResult!.error; // Add/overwrite error message
-             finalResult.errorDetails = modelResult!.details;
-             updateProgress('model_stage_failed');
-             console.error(`[Orchestrator] Model stage failed for ${prop.name}: ${modelResult!.error}`);
-        } else {
-            // Model stage succeeded
-            globalModelSuccessCount++;
-            // Add model details to the result object. Status remains 'success'.
-            finalResult.modelR2Key = modelResult!.data!.modelR2Key;
-            finalResult.modelPublicUrl = modelResult!.data!.modelPublicUrl;
-             updateProgress('model_stage_success');
-        }
-
-        // Inter-Item Rate Limiting Delay for Model Stage
-        if (i < modelQueue.length - 1) { // Don't delay after the last item in this queue
-            const stageDuration = Date.now() - stageStartTime;
-            const delayNeeded = Math.max(0, MIN_MODEL_INTERVAL_MS - stageDuration);
-             if (delayNeeded > 0) {
-                console.log(`   Model stage took ${stageDuration}ms. Waiting ${delayNeeded.toFixed(0)}ms before next item...`);
-                await delay(delayNeeded);
-            } else {
-                 console.log(`   Model stage took ${stageDuration}ms (>= ${MIN_MODEL_INTERVAL_MS}ms interval). Proceeding immediately.`);
-                  // Optional: await delay(1);
-            }
-         }
-    } // End loop through modelQueue (Model Stage)
-     console.log(`--- Model Stage Complete: ${globalModelSuccessCount} / ${modelQueue.length} successful attempts ---`);
-
-
-    // --- Final Summary ---
-    // Filter out potential nulls (though shouldn't happen) and count statuses
-     const finalResults = results.filter(r => r !== null) as ProcessResult[];
-    const overallSuccess = finalResults.filter(r => r.status === 'success').length;
-    const imageFail = finalResults.filter(r => r.status === 'image_failed').length;
-    const modelFail = finalResults.filter(r => r.status === 'model_failed').length; // Failed only at model stage
-
-    console.log(`\n--- Processing Complete ---`);
     console.log(`Total Props: ${sceneData.length}`);
-    console.log(`Overall Successful (Image + Model): ${overallSuccess}`);
-    console.log(`Failed at Image Stage: ${imageFail}`);
-    console.log(`Failed at Model Stage (after Image OK): ${modelFail}`);
+    console.log(`Overall Successful (Image + Model): ${overallSuccessCount}`);
+    console.log(`Failed at Image Stage: ${imageFailCount}`);
+    console.log(`Failed at Model Stage (after Image OK): ${modelFailCount}`);
     console.log("---------------------------\n");
 
-    return finalResults; // Return the array of results
+    return results;
 }
