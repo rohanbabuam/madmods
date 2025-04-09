@@ -31,8 +31,9 @@ async function generateImage (prop:any) {
         method: 'POST',
         body: JSON.stringify(prop)
     });
-    const schnellResultJSON = await schnellResult.json()
-    let generatedImageURL = JSON.stringify(schnellResultJSON);
+    const schnellResultJSON:any = await schnellResult.json()
+    console.log(schnellResultJSON)
+    let generatedImageURL = schnellResultJSON.imageURL;
     console.log(generatedImageURL);
 
     
@@ -44,7 +45,7 @@ async function generateImage (prop:any) {
     const r2Key = `worlds/${userID}/${worldID}/props/${propID}.${fileExtension}`;
     
     let uploadObject = {
-        'fileURL_toUpload' : generatedImageURL,
+        'fileURL_ToUpload' : generatedImageURL,
         'r2key' : r2Key
     }
 

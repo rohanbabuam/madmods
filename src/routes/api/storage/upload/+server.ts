@@ -30,10 +30,10 @@ export async function POST(event: RequestEvent) {
     const r2key = inputs.r2key;
 
     if (!fileURL_toUpload || typeof fileURL_toUpload !== 'string') {
-        throw error(400, "Bad Request: Missing or invalid 'fileURL_ToUpload' (must be a string)");
+        throw error(400, "Bad Request: Missing or invalid 'fileURL_ToUpload' (must be a string) :: Received fileURL_ToUpload = " + fileURL_toUpload);
     }
     if (!r2key || typeof r2key !== 'string' || r2key.length === 0) {
-        throw error(400, "Bad Request: Missing, invalid, or empty 'r2key' (must be a non-empty string)");
+        throw error(400, "Bad Request: Missing, invalid, or empty 'r2key' (must be a non-empty string) :: Received r2key = " + r2key);
     }
     try {
         new URL(fileURL_toUpload); // Validate URL format
