@@ -1,6 +1,5 @@
 import { error, json } from '@sveltejs/kit';
 
-// NO MORE OPTIONS HANDLER NEEDED HERE for CORS preflight
 
 /** @type {import('./$types').RequestHandler} */
 export async function POST({ request }) {

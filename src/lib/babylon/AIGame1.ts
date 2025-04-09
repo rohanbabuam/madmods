@@ -65,6 +65,12 @@ async function generateImage (prop:any) {
     const uploadResult = await fetch(uploadEndpoint, {
         mode: 'cors',
         method: 'POST',
+        headers: {
+            // VITAL: Tell the server you're sending JSON
+            'Content-Type': 'application/json',
+            // Add any other necessary headers like Authorization if needed
+            // 'Authorization': 'Bearer your_token_here'
+        },
         body: JSON.stringify(uploadObject)
     });
     const uploadResultJSON = await uploadResult.json()
