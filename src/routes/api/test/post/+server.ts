@@ -23,12 +23,12 @@ export async function POST(event: RequestEvent) {
 	// console.log(event.url.href);
 	console.log("showOrigin = ", showOrigin);
 
-	// --- 1. Check for R2 Binding ---
-		if (!event.platform?.env.MADMODS_R2) {
-			console.error("R2 binding 'MADMODS_R2' not found.");
-			throw error(500, "Server configuration error: R2 bucket not available.");
-		}
-	const bucket = event.platform?.env.MADMODS_R2;
+	// // --- 1. Check for R2 Binding ---
+	// 	if (!event.platform?.env.MADMODS_R2) {
+	// 		console.error("R2 binding 'MADMODS_R2' not found.");
+	// 		throw error(500, "Server configuration error: R2 bucket not available.");
+	// 	}
+	// const bucket = event.platform?.env.MADMODS_R2;
 
 	// // --- 2. Get Inputs ---
     // let inputs:any;
