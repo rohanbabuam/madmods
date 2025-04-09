@@ -59,6 +59,12 @@ export async function POST(event: RequestEvent) {
 	// const contentType = fetchResponse.headers.get('content-type') || 'application/octet-stream';
 
 	return new Response(JSON.stringify(showOrigin), {
-		status: 200
+		status: 200,
+		headers: {
+			'Access-Control-Allow-Origin': showOrigin,
+			'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
+			'Access-Control-Allow-Headers': '*',
+			vary: showOrigin,
+		},
 	});
 }
