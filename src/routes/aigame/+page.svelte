@@ -40,7 +40,7 @@
 
 		const PostResult:any = await fetch(postEndpoint, {
 			method: 'POST',
-			body: JSON.stringify(uploadObject)
+			//body: JSON.stringify(uploadObject)
 		});
 		const uploadResultJSON = await PostResult.json()
 		let uploadFileResponse = JSON.stringify(uploadResultJSON);
