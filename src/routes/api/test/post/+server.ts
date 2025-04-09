@@ -1,68 +1,8 @@
 import type { RequestEvent } from '@sveltejs/kit';
 import { error } from '@sveltejs/kit';
 
-
-// --- Helper function to handle OPTIONS requests ---
-function handleOptions(request:any, allowedOrigin:any) {
-	const headers = request.headers;
-	// Check if the request has the required headers for a preflight request
-	if (
-	  headers.get('Origin') !== null &&
-	  headers.get('Access-Control-Request-Method') !== null &&
-	  headers.get('Access-Control-Request-Headers') !== null
-	) {
-	  // Handle CORS preflight requests.
-	  // Specify which headers are allowed in requests sent to this endpoint.
-	  // '*' is permissive, list specific ones like 'Content-Type, Authorization' for better security.
-	  let respHeaders = {
-		'Access-Control-Allow-Origin': allowedOrigin,
-		'Access-Control-Allow-Methods': 'POST, GET, OPTIONS', // Include methods you want to allow
-		'Access-Control-Allow-Headers': headers.get('Access-Control-Request-Headers'), // Echo back the requested headers
-		'Access-Control-Max-Age': '86400', // Optional: Cache preflight response for 1 day
-		'Vary': 'Origin, Access-Control-Request-Method, Access-Control-Request-Headers', // Crucial for caching
-	  };
-  
-	  return new Response(null, {
-		status: 204, // No Content - standard for successful preflight
-		headers: respHeaders,
-	  });
-	} else {
-	  // Handle standard OPTIONS requests that are not preflights.
-	  // Or return error if OPTIONS isn't generally supported.
-	  return new Response(null, {
-		headers: {
-		  'Allow': 'POST, GET, OPTIONS', // Inform client of allowed methods
-		},
-	  });
-	}
-  }
-
 /** @type {import('./$types').RequestHandler} */
 export async function POST(event: RequestEvent) {
-	const cacheKey = new Request(event.url.href.toString());
-
-	let whitelistedOrigins = [
-		'app://-',
-		'https://localhost:5173',
-		'https://127.0.0.1:5173',
-		'http://localhost:5173',
-		'http://127.0.0.1:5173',
-	];
-
-	let showOrigin: string = 'http://localhost:5173';
-
-	let requestOrigin = event.request.headers.get('Origin')?.toString();
-
-	if (requestOrigin && whitelistedOrigins.includes(requestOrigin)) {
-		showOrigin = requestOrigin;
-	}
-	// console.log(event.url.href);
-	console.log("showOrigin = ", showOrigin);
-
-	// --- Handle CORS Preflight Request ---
-	if (event.request.method === 'OPTIONS') {
-		return handleOptions(event.request, showOrigin);
-	}
 
 	// // --- 1. Check for R2 Binding ---
 	// 	if (!event.platform?.env.MADMODS_R2) {
@@ -99,11 +39,7 @@ export async function POST(event: RequestEvent) {
 	// const fileData = await fetchResponse.arrayBuffer(); // Get content as ArrayBuffer
 	// const contentType = fetchResponse.headers.get('content-type') || 'application/octet-stream';
 
-	return new Response(JSON.stringify("Origin = "+showOrigin), {
-		status: 200,
-		headers: {
-			'Access-Control-Allow-Origin': showOrigin,
-			vary: showOrigin,
-		}
+	return new Response(JSON.stringify("Response = hello post"), {
+		status: 200
 	});
 }
