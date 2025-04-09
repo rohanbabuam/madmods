@@ -58,13 +58,11 @@ export async function POST(event: RequestEvent) {
 	// const fileData = await fetchResponse.arrayBuffer(); // Get content as ArrayBuffer
 	// const contentType = fetchResponse.headers.get('content-type') || 'application/octet-stream';
 
-	return new Response(JSON.stringify(showOrigin), {
+	return new Response(JSON.stringify("Origin = "+showOrigin), {
 		status: 200,
 		headers: {
 			'Access-Control-Allow-Origin': showOrigin,
-			'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
-			'Access-Control-Allow-Headers': '*',
 			vary: showOrigin,
-		},
+		}
 	});
 }
