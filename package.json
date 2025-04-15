@@ -51,7 +51,10 @@
 	"pnpm": {
 		"onlyBuiltDependencies": [
 			"esbuild"
-		]
+		],
+		"patchedDependencies": {
+			"oboe@2.1.7": "patches/oboe@2.1.7.patch"
+		}
 	},
 	"dependencies": {
 		"@anthropic-ai/sdk": "^0.39.0",

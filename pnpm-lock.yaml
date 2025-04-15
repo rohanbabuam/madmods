@@ -7,6 +7,11 @@ settings:
 onlyBuiltDependencies:
   - esbuild
 
+patchedDependencies:
+  oboe@2.1.7:
+    hash: dimpsmefrjmhlxpfh5ywg3gdna
+    path: patches/oboe@2.1.7.patch
+
 dependencies:
   '@anthropic-ai/sdk':
     specifier: ^0.39.0
@@ -49,7 +54,7 @@ dependencies:
     version: 7.2.0
   oboe:
     specifier: ^2.1.7
-    version: 2.1.7
+    version: 2.1.7(patch_hash=dimpsmefrjmhlxpfh5ywg3gdna)
   preline:
     specifier: ^3.0.1
     version: 3.0.1
@@ -3315,11 +3320,12 @@ packages:
     engines: {node: '>=0.10.0'}
     dev: false
 
-  /oboe@2.1.7:
+  /oboe@2.1.7(patch_hash=dimpsmefrjmhlxpfh5ywg3gdna):
     resolution: {integrity: sha512-Y2oCMU2xgITORaNvIDCvUyn2ZG/5NI19lLjMFThgYzCH+GA/fgYvVcwxAqnZPiMiUrPq64jLzCkBXqKSu/R6MA==}
     dependencies:
       http-https: 1.0.0
     dev: false
+    patched: true
 
   /ohash@2.0.11:
     resolution: {integrity: sha512-RdR9FQrFwNBNXAr4GixM8YaRZRJ5PUWbKYbE5eOsrwAjJW0q2REGcf79oYPsLyskQCZG1PLN+S/K1V00joZAoQ==}
