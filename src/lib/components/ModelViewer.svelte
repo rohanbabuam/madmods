@@ -59,6 +59,7 @@
 			camera.wheelPrecision = 50; // Adjust zoom speed
 			camera.lowerRadiusLimit = 1; // Prevent zooming too close
 			camera.upperRadiusLimit = 20; // Prevent zooming too far
+            camera.minZ = 0;
 
 			// --- Light ---
 			// Parameters: name, direction, scene

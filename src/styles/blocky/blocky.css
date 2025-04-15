@@ -1,0 +1,257 @@
+@font-face {
+  font-family: "Roboto Mono";
+  src: url(../static/fonts/RobotoMono-VariableFont_wght.ttf);
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background-color: #fff;
+  font-family: sans-serif;
+  overflow: hidden;
+}
+
+#container {
+  display: grid;
+  grid-template-rows: 60px calc(100% - 80px) 20px;
+  height: 100%;
+}
+
+#header {
+  grid-row: 1;
+  background-color: #5d5d73;
+}
+
+#split {
+  grid-row: 2;
+  display: flex;
+  flex-direction: row;
+}
+
+#runArea {
+  width: 60%;
+  background: #333333;
+}
+
+#runAreaCanvas {
+  width: 100%;
+  height: 100%;
+}
+
+#blocklyArea {
+  width: 40%;
+  background: #ffffff;
+  text-align: center;
+}
+
+#columnResizer {
+  display: block;
+  top: 0;
+  right: 0;
+  margin: 0;
+  width: 6px;
+  height: 100%;
+  padding: 0;
+  cursor: col-resize;
+  border: 1px solid transparent;
+}
+
+#footer {
+  grid-row: 3;
+  background-color: #5d5d73;
+  color: #fff;
+  font-family: "Roboto Mono";
+  font-size: small;
+}
+
+#fpsCounter {
+  text-align: right;
+  padding-right: 10px;
+}
+
+.blocklyTreeLabel {
+  font-family: "Roboto Mono";
+  font-size: 12px !important;
+}
+
+.blocklyText {
+  font-family: "Roboto Mono";
+  font-size: 10px;
+}
+
+#logo {
+  height: 50px;
+  padding-top: 5px;
+  padding-left: 20px;
+}
+
+#buttonrow {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  padding: 0 0px;
+  width: 725px;
+}
+
+.button {
+  background-color: transparent;
+  border: none;
+  background-size: 100%;
+  height: 30px;
+  width: 30px;
+  margin-top: 7;
+  margin-bottom: 7;
+  cursor: pointer;
+  flex-direction: column;
+  align-items: center;
+  color: white;
+  font-size: 12px;
+  font-family: "Roboto Mono";
+}
+
+.button:hover {
+  background-color: #777;
+}
+
+#reset {
+  background-image: url(../static/icons/restart.svg);
+  background-repeat: no-repeat;
+  padding-top: 30px;
+}
+
+.physics-on {
+  background-image: url(../static/icons/toggle_on.svg);
+  background-repeat: no-repeat;
+  padding-top: 30px;
+}
+
+.physics-off {
+  background-image: url(../static/icons/toggle_off.svg);
+  background-repeat: no-repeat;
+  padding-top: 30px;
+}
+
+#fullscreen {
+  background-image: url(../static/icons/fullscreen.svg);
+  background-repeat: no-repeat;
+  padding-top: 30px;
+}
+
+#vr {
+  background-image: url(../static/icons/vr.svg);
+  background-repeat: no-repeat;
+  padding-top: 30px;
+}
+
+#debug {
+  background-image: url(../static/icons/debug.svg);
+  background-repeat: no-repeat;
+  padding-top: 30px;
+}
+
+#examples {
+  background-image: url(../static/icons/media.svg);
+  background-repeat: no-repeat;
+  padding-top: 30px;
+}
+
+#clear {
+  background-image: url(../static/icons/delete.svg);
+  background-repeat: no-repeat;
+  padding-top: 30px;
+}
+
+#export {
+  background-image: url(../static/icons/download.svg);
+  background-repeat: no-repeat;
+  padding-top: 30px;
+}
+
+#help {
+  background-image: url(../static/icons/help.svg);
+  background-repeat: no-repeat;
+  padding-top: 30px;
+}
+
+#drag {
+  z-index: 999;
+  position: relative;
+  background-color: white;
+  width: 22px;
+  top: 45%;
+  left: -9px;
+  pointer-events: none;
+  cursor: col-resize;
+  clip-path: inset(0% 19%);
+  user-select: none;
+}
+
+#image-upload>input {
+  display: none;
+} 
+
+#image-upload-label {
+  display: flex;
+  flex-direction: column; /* Stack children vertically */
+  align-items: center;    /* Center children horizontally */
+  cursor: pointer;        /* Indicate it's clickable */
+  color: white;
+  font-size: 12px;
+  font-family: "Roboto Mono";
+}
+
+#image-upload-label img.button {
+  margin-bottom: 0px;
+}
+
+#title3d {
+  background-color: transparent;
+  border: none;
+  background-size: 100%;
+  height: 40px;
+  width: 40px;
+  margin-top: 2;
+  margin-bottom: 2;
+}
+
+#vr-dropdown {
+  position: absolute;
+  display: none;
+  flex-direction: column;
+  top: 60px;
+  left: 210px;
+  width: 200px;
+  background-color: #5d5d73;
+  min-width: 160px;
+  box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
+  z-index: 999;
+}
+
+#vr-dropdown button {
+  font-weight: bold;
+  font-family: "Roboto Mono";
+  text-align: left;
+}
+
+#examples-dropdown {
+  position: absolute;
+  display: none;
+  flex-direction: column;
+  top: 60px;
+  left: 375px;
+  width: 200px;
+  background-color: #5d5d73;
+  min-width: 160px;
+  box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
+  z-index: 999;
+}
+
+#examples-dropdown button {
+  font-weight: bold;
+  font-family: "Roboto Mono";
+  text-align: left;
+}

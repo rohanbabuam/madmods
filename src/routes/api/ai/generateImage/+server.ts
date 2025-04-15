@@ -56,8 +56,8 @@ export async function POST(event: RequestEvent) {
         console.log(`[GenerateImage API] Processing request for User: ${userID}, Prop: ${propID}`);
 
         // --- 3. Prepare Replicate Input ---
-        const templatePromptPrefix = "a low poly toy 3d model of ";
-        const templatePromptSuffix = " Made of solid colors, centered in the frame against a pure black background. Bright saturated solid colors, low poly 3D game asset, isometric view";
+        const templatePromptPrefix = "a colorful cartoon style 3d model of ";
+        const templatePromptSuffix = " Made of solid colors, centered in the frame against a pure black background. Bright saturated solid colors, low poly 3D game asset";
         const fullPrompt = templatePromptPrefix + inputPrompt + templatePromptSuffix;
         const replicateInput = { prompt: fullPrompt, go_fast: true, megapixels: "1", num_outputs: 1, aspect_ratio: "1:1", output_format: imageFormat, output_quality: 100, num_inference_steps: 4 };
 

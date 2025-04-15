@@ -15,3 +15,7 @@
   
   /* Defaults hover styles on all devices */
   @custom-variant hover (&:hover);
+
+  svg[display="none"] {
+    display: none !important;
+  }

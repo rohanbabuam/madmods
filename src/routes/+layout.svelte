@@ -13,9 +13,9 @@
 
 
 
-<header id="navbar" class="fixed flex flex-wrap sm:justify-start sm:flex-nowrap w-full text-sm py-3 z-100
+<header id="navbar" class="fixed flex flex-wrap sm:justify-start sm:flex-nowrap w-full text-sm py-3 z-100 top-0
 bg-black/20 backdrop-blur-lg
-aos opacity-0 transition-opacity duration-500 ease-in-out"
+aos opacity-100 transition-opacity duration-500 ease-in-out"
 	 data-animstage-1="opacity-100"
 	 >
 	<nav class="max-w-[85rem] w-full mx-auto px-4 sm:flex sm:items-center sm:justify-between">
@@ -114,3 +114,10 @@ aos opacity-0 transition-opacity duration-500 ease-in-out"
 <!-- ========== END HEADER ========== -->
 
 {@render children()}
+
+<style>
+	svg[display="none"] {
+  display: none !important;
+}
+
+</style>
