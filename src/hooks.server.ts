@@ -26,7 +26,7 @@ if (allowedOrigins.length > 0) {
 }
 
 export const handle: Handle = async ({ event, resolve }) => {
-	const requestOrigin = event.request.headers.get('Origin');
+	const requestOrigin:any = event.request.headers.get('Origin');
     let isOriginAllowed = false;
 
     // Check if the request Origin header is present and is in our allowed list
