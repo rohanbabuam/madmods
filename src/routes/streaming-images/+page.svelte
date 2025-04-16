@@ -124,7 +124,7 @@
                 throw new Error(`Failed to enqueue: ${errorBody}`);
             }
 
-            const result = await response.json();
+            const result:any = await response.json();
 
             if (!result.statusKey) {
                  throw new Error("Enqueue response missing 'statusKey'.");
@@ -204,7 +204,7 @@
                 throw new Error(`HTTP error ${response.status} fetching status`);
             }
 
-            const statusReport = await response.json();
+            const statusReport:any = await response.json();
 
             console.log(`[Prop: ${propId}] Received status:`, statusReport.status);
 
@@ -281,10 +281,6 @@
             error = "Initialization error: API URL not available.";
             return;
         }
-         if (R2_PUBLIC_URL_BASE === 'https://your-r2-public-bucket-url.r2.dev') {
-             error = "Configuration Error: R2 Public URL is not set. Please update the R2_PUBLIC_URL_BASE constant in the script.";
-             return;
-         }
         if (!userPrompt || userPrompt.trim() === '') {
             error = "Please enter a prompt before generating.";
             return;
@@ -423,9 +419,8 @@
 	<div class="mb-6">
 		<button
 			on:click={startStreaming}
-			disabled={isLoading || !claudeApiUrl || R2_PUBLIC_URL_BASE === 'https://your-r2-public-bucket-url.r2.dev'}
+			disabled={isLoading || !claudeApiUrl}
 			class="bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white font-bold py-2 px-4 rounded transition duration-150 ease-in-out shadow-md disabled:cursor-not-allowed"
-            title={R2_PUBLIC_URL_BASE === 'https://your-r2-public-bucket-url.r2.dev' ? 'Please configure R2_PUBLIC_URL_BASE in the script' : ''}
             >
 			{#if isLoading}
 				<!-- Loading spinner -->
