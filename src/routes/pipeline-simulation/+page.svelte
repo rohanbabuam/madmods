@@ -123,48 +123,56 @@
 	// --- Function to Trigger Image Generation (Only called if needed) ---
 	async function triggerImageGeneration(propState: PropState) {
 		// Condition check already happened before calling this function
-        if (!metadata || !metadata.worldName) { /* ... unchanged error handling ... */ return; }
+        if (!metadata || !metadata.worldName) {
+			console.error("Cannot trigger image generation: Metadata (with worldName) not yet received.");
+			updatePropState(propState.id, { imageStatus: 'failed', imageStatusMessage: 'Error: Missing world metadata.', modelStatus: 'skipped_image_failed' });
+			return;
+		}
         const worldID = metadata.worldName.replace(/\s+/g, '-').toLowerCase();
         const propID = propState.id.replace(/\s+/g, '-').toLowerCase();
         const inputPrompt = propState.propData.description || propState.propData.name;
-        if (!inputPrompt) { /* ... unchanged error handling ... */ return; }
+        if (!inputPrompt) {
+			console.error(`Cannot trigger image generation for prop ${propID}: No description or name found.`);
+			updatePropState(propState.id, { imageStatus: 'failed', imageStatusMessage: 'Error: Missing prompt data.', modelStatus: 'skipped_image_failed' });
+			return;
+		}
 
         const requestBody = { inputPrompt, userID: USER_ID_FOR_UPLOADS, worldID, propID, imageFormat: 'jpg' };
         console.log(`[Prop: ${propID}] Enqueuing image generation...`, requestBody);
         updatePropState(propState.id, { imageStatus: 'queued', imageStatusMessage: 'Sending request to image queue...' });
 
         try {
-            const response = await fetch(IMAGE_GENERATION_ENDPOINT, { /* ... unchanged fetch call ... */
-                method: 'POST',
+            const response = await fetch(IMAGE_GENERATION_ENDPOINT, {
+				method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(requestBody),
-            });
-            if (!response.ok) { /* ... unchanged error handling ... */
-                let errorBody = `HTTP ${response.status}: ${response.statusText}`;
-				try { const errorJson: any = await response.json(); errorBody = errorJson.message || errorJson.error || JSON.stringify(errorJson); } catch (e) { /* ignore */ }
+			});
+            if (!response.ok) {
+				let errorBody = `HTTP ${response.status}: ${response.statusText}`;
+				try { const errorJson: any = await response.json(); errorBody = errorJson.message || errorJson.error || JSON.stringify(errorJson); } catch (e) { /* ignore parsing failure */ }
 				throw new Error(`Failed to enqueue image: ${errorBody}`);
-            }
+			}
             const result: any = await response.json();
             if (!result.statusKey) throw new Error("Image enqueue response missing 'statusKey'.");
             const fullStatusUrl = `${R2_PUBLIC_URL_BASE}/${result.statusKey}`;
             updatePropState(propState.id, { imageStatus: 'polling', imageStatusUrl: fullStatusUrl, imageStatusMessage: 'Image Queued. Waiting...', imageAttempts: 0 });
             startImagePolling(propState.id, fullStatusUrl);
-        } catch (err: any) { /* ... unchanged error handling ... */
-             console.error(`[Prop: ${propID}] Error enqueuing image generation:`, err);
-			 updatePropState(propState.id, { imageStatus: 'error_enqueue', imageStatusMessage: `Image Enqueue failed: ${err.message}`, modelStatus: 'skipped_image_failed' });
-        }
+        } catch (err: any) {
+			console.error(`[Prop: ${propID}] Error enqueuing image generation:`, err);
+			updatePropState(propState.id, { imageStatus: 'error_enqueue', imageStatusMessage: `Image Enqueue failed: ${err.message}`, modelStatus: 'skipped_image_failed' }); // Skip model gen
+		}
 	}
 
 	// --- Function to Start Image Polling ---
-	function startImagePolling(propId: string, statusUrl: string) { /* ... unchanged ... */
-        clearPollingInterval(propId, 'image');
+	function startImagePolling(propId: string, statusUrl: string) {
+		clearPollingInterval(propId, 'image'); // Clear existing interval if any
 		console.log(`[Prop: ${propId}] Starting IMAGE polling for status at ${statusUrl}`);
 		const intervalId = setInterval(() => { pollImageStatus(propId, statusUrl); }, POLLING_INTERVAL_MS);
 		activeImagePollingIntervals.set(propId, intervalId);
-    }
+	}
 
 	// --- Function to Poll Image Status ---
-	async function pollImageStatus(propId: string, statusUrl: string) { /* ... largely unchanged, but triggers model gen ... */
+	async function pollImageStatus(propId: string, statusUrl: string) { 
         const propIndex = receivedProps.findIndex(p => p.id === propId);
 		if (propIndex === -1) { /* ... */ clearPollingInterval(propId, 'image'); return; }
 		let currentAttempts = receivedProps[propIndex].imageAttempts + 1;
@@ -210,7 +218,7 @@
 					});
 					clearPollingInterval(propId, 'image');
 					break;
-                // Other cases ('processing', 'generating', 'queued', default) remain unchanged
+                // Other cases ('processing', 'generating', 'queued', default)
                 case 'processing':
                 case 'generating':
 					updatePropState(propId, { imageStatus: 'generating', imageStatusMessage: `Generating image... (Attempt ${currentAttempts})` });
@@ -223,7 +231,7 @@
 					updatePropState(propId, { imageStatusMessage: `Unknown status: ${statusReport.status} (Attempt ${currentAttempts})` });
 					break;
 			}
-		} catch (err: any) { /* ... unchanged error handling ... */
+		} catch (err: any) { 
             console.error(`[Prop: ${propId}] Error during image polling:`, err);
 			if (err instanceof SyntaxError) { /* ... json parse error ... */ }
             else {
@@ -249,12 +257,12 @@
 		updatePropState(propState.id, { modelStatus: 'queued', modelStatusMessage: 'Sending request to model queue...' });
 
 		try {
-			const response = await fetch(MODEL_GENERATION_ENDPOINT, { /* ... unchanged fetch call ... */
+			const response = await fetch(MODEL_GENERATION_ENDPOINT, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(requestBody),
             });
-			if (!response.ok) { /* ... unchanged error handling ... */
+			if (!response.ok) {
                 let errorBody = `HTTP ${response.status}: ${response.statusText}`;
 				try { const errorJson: any = await response.json(); errorBody = errorJson.message || errorJson.error || JSON.stringify(errorJson); } catch (e) { /* ignore */ }
 				throw new Error(`Failed to enqueue model: ${errorBody}`);
@@ -264,14 +272,14 @@
 			const fullModelStatusUrl = `${R2_PUBLIC_URL_BASE}/${result.statusKey}`;
 			updatePropState(propState.id, { modelStatus: 'polling', modelStatusUrl: fullModelStatusUrl, modelStatusMessage: 'Model Queued. Waiting...', modelAttempts: 0 });
 			startModelPolling(propState.id, fullModelStatusUrl);
-		} catch (err: any) { /* ... unchanged error handling ... */
+		} catch (err: any) { 
             console.error(`[Prop: ${propID}] Error enqueuing model generation:`, err);
 			updatePropState(propState.id, { modelStatus: 'error_enqueue', modelStatusMessage: `Model Enqueue failed: ${err.message}` });
         }
 	}
 
 	// --- Function to Start Model Polling ---
-	function startModelPolling(propId: string, statusUrl: string) { /* ... unchanged ... */
+	function startModelPolling(propId: string, statusUrl: string) {
         clearPollingInterval(propId, 'model');
 		console.log(`[Prop: ${propId}] Starting MODEL polling for status at ${statusUrl}`);
 		const intervalId = setInterval(() => { pollModelStatus(propId, statusUrl); }, POLLING_INTERVAL_MS);
@@ -279,7 +287,7 @@
     }
 
 	// --- Function to Poll Model Status ---
-	async function pollModelStatus(propId: string, statusUrl: string) { /* ... unchanged logic ... */
+	async function pollModelStatus(propId: string, statusUrl: string) { 
         const propIndex = receivedProps.findIndex(p => p.id === propId);
 		if (propIndex === -1) { /* ... */ clearPollingInterval(propId, 'model'); return; }
 		let currentAttempts = receivedProps[propIndex].modelAttempts + 1;
@@ -313,7 +321,7 @@
 					updatePropState(propId, { modelStatus: 'failed', modelStatusMessage: `Model Failed: ${statusReport.message || 'Unknown error'}`});
 					clearPollingInterval(propId, 'model');
 					break;
-                // Other cases ('processing', 'generating', 'queued', default) remain unchanged
+                // Other cases ('processing', 'generating', 'queued', default)
                 case 'processing':
 				case 'generating':
 					updatePropState(propId, { modelStatus: 'generating', modelStatusMessage: `Generating model... (Attempt ${currentAttempts})` });
@@ -326,7 +334,7 @@
 					updatePropState(propId, { modelStatusMessage: `Unknown model status: ${statusReport.status} (Attempt ${currentAttempts})` });
 					break;
 			}
-		} catch (err: any) { /* ... unchanged error handling ... */
+		} catch (err: any) {
             console.error(`[Prop: ${propId}] Error during model polling:`, err);
 			if (err instanceof SyntaxError) { /* ... json parse error ... */ }
             else {
@@ -337,7 +345,7 @@
 	}
 
 	// --- Helper to Clear Interval ---
-	function clearPollingInterval(propId: string, type: 'image' | 'model') { /* ... unchanged ... */
+	function clearPollingInterval(propId: string, type: 'image' | 'model') {
         const intervalMap = type === 'image' ? activeImagePollingIntervals : activeModelPollingIntervals;
 		if (intervalMap.has(propId)) {
 			clearInterval(intervalMap.get(propId));
@@ -383,7 +391,7 @@
 			headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
 			cached: false, withCredentials: false
 		})
-			.node('metadata', (meta: any) => { /* ... unchanged metadata handling ... */
+			.node('metadata', (meta: any) => {
                 console.log('Received Metadata:', meta);
 				if (!metadata) {
 					metadata = meta;
@@ -495,28 +503,70 @@
                      console.warn(`Received duplicate prop name '${propObject.name}'. Skipping.`);
                 }
 			})
-			.done((finalJson: any) => { /* ... unchanged .done() logic ... */
+			.done((finalJson: any) => {
                 console.log('Stream finished successfully.');
-				isLoading = false;
+				isLoading = false; // Claude stream finished
+
+                // Final check: Ensure metadata was received AND has worldName. If not, fail waiting props.
                 let metadataError = false;
-                if (!metadata) { /* ... */ metadataError = true; }
-                else if (!metadata.worldName) { /* ... */ metadataError = true; }
-                if (metadataError) { /* ... fail waiting props ... */ }
-                if (!error) { isComplete = true; }
-                else { isComplete = false; if (uploadStatus === 'idle') { uploadStatus = 'failed'; } }
+                if (!metadata) {
+                    console.error("Stream finished, but no metadata was ever received.");
+                    if (!error) error = "Stream completed, but failed to receive essential metadata.";
+                    metadataError = true;
+                } else if (!metadata.worldName) {
+                     console.error("Stream finished, metadata received but missing worldName.");
+                     if (!error) error = "Stream completed, but metadata is missing required worldName.";
+                     metadataError = true;
+                }
+
+                if (metadataError) {
+                    receivedProps.forEach(p => {
+                        // Fail any prop still waiting for metadata
+                        if (p.imageStatus === 'idle' && p.imageStatusMessage?.includes('Waiting for metadata')) {
+                            updatePropState(p.id, {
+                                imageStatus: 'failed', imageStatusMessage: 'Failed: Critical metadata missing or invalid.',
+                                modelStatus: 'skipped_image_failed'
+                            });
+                        }
+                    });
+                     uploadStatus = 'failed'; // Prevent upload due to critical metadata error
+                     uploadMessage = 'Cannot upload scene JSON: Critical metadata missing.';
+                }
+
+                if (!error) {
+                    isComplete = true; // Mark Claude stream as complete *only if no fatal errors occurred*
+                    // The final upload trigger is handled by the reactive block `$: {...}` below
+                } else {
+                    // If an error occurred during the stream itself (set by .fail or the metadata check above)
+                    isComplete = false; // Ensure it's false
+                     if (uploadStatus === 'idle') { // Avoid overwriting specific metadata error message
+                        uploadStatus = 'failed';
+                        uploadMessage = 'Cannot upload scene JSON due to errors during data generation.';
+                     }
+                }
             })
-			.fail((errorReport: any) => { /* ... unchanged .fail() logic ... */
+			.fail((errorReport: any) => {
                 console.error('Stream processing failed:', errorReport);
 				isLoading = false;
-				isComplete = false;
-                uploadStatus = 'failed';
-                let errorMessage = `json stream failed: ${errorReport.statusCode || 'Network Error'}. `;
-                if (errorReport.body) { try { /* ... */ } catch (e) { /* ... */ } }
-				else if (errorReport.thrown) { /* ... */ }
+				isComplete = false; // Stream did not complete successfully
+                uploadStatus = 'failed'; // Prevent upload
+                uploadMessage = 'Cannot upload scene JSON: Main data stream failed.';
+				let errorMessage = `json stream failed: ${errorReport.statusCode || 'Network Error'}. `;
+				if (errorReport.body) { try { const parsedBody = JSON.parse(errorReport.body); errorMessage += parsedBody.error || parsedBody.message || parsedBody.details || errorReport.body; } catch (e) { errorMessage += errorReport.body; } }
+				else if (errorReport.thrown) { errorMessage += (errorReport.thrown as Error).message || 'Client-side error'; }
 				error = errorMessage;
-				receivedProps.forEach(p => { // Mark remaining as failed
-					if (!isTerminalImageStatus(p.imageStatus)) { /* ... */ }
-                    if (!isTerminalModelStatus(p.modelStatus)) { /* ... */ }
+
+				// Mark any props still processing as failed and clear intervals
+				receivedProps.forEach(p => {
+                    // Use the defined terminal statuses for checking
+					if (!terminalImageStatuses.includes(p.imageStatus as any)) {
+						updatePropState(p.id, { imageStatus: 'failed', imageStatusMessage: 'Failed: Main data stream error.' });
+						clearPollingInterval(p.id, 'image');
+					}
+                     if (!terminalModelStatuses.includes(p.modelStatus as any)) {
+						updatePropState(p.id, { modelStatus: 'failed', modelStatusMessage: 'Failed: Main data stream error.' });
+						clearPollingInterval(p.id, 'model');
+					}
 				});
             });
 	}
@@ -527,7 +577,7 @@
     );
 
     // --- Trigger Final JSON Upload when Ready ---
-    $: { /* ... unchanged reactive trigger logic ... */
+    $: {
         if (isComplete && isAllProcessingComplete && uploadStatus === 'idle' && !error) {
              console.log("All processing complete. Triggering final JSON upload.");
              uploadStatus = 'pending';
@@ -539,44 +589,101 @@
         }
     }
 
-    // --- Function to Upload Final Scene JSON ---
-    async function uploadFinalSceneJson() { /* ... unchanged upload logic ... */
-        if (!metadata || !metadata.worldName) { /* ... check metadata ... */ return; }
-        if (!uploadApiUrl) { /* ... check api url ... */ return; }
-        uploadStatus = 'uploading';
+    // --- Function to Upload Final Scene JSON (NEW) ---
+    async function uploadFinalSceneJson() {
+        // Re-check critical dependencies right before upload attempt
+        if (!metadata || !metadata.worldName) {
+            console.error("Cannot upload final JSON: Missing metadata or worldName.");
+            uploadStatus = 'failed';
+            uploadMessage = 'Upload failed: Missing required metadata (worldName).';
+            return;
+        }
+        if (!uploadApiUrl) {
+             console.error("Cannot upload final JSON: Upload API URL not configured.");
+            uploadStatus = 'failed';
+            uploadMessage = 'Upload failed: Frontend configuration error (API URL missing).';
+            return;
+        }
+
+        uploadStatus = 'uploading'; // Update status
         uploadMessage = 'Preparing and uploading final scene JSON...';
-        finalJsonUrl = null;
+        finalJsonUrl = null; // Clear previous URL if any
+
         const worldID = metadata.worldName.replace(/\s+/g, '-').toLowerCase();
+        // Construct the final R2 key according to the requirement
         const r2key = `worlds/${USER_ID_FOR_UPLOADS}/${worldID}/scene/${worldID}.json`;
-        const finalSceneData = { metadata: metadata, props: receivedProps.map(p => p.propData) };
+
+        // Construct the final JSON object - using only the updated propData from each state item
+        const finalSceneData = {
+            metadata: metadata,
+            // Extract the propData which now contains propImage and propModel (if successful)
+            props: receivedProps.map(p => p.propData)
+        };
 
         try {
-            const jsonString = JSON.stringify(finalSceneData, null, 2);
-            const base64Data = btoa(unescape(encodeURIComponent(jsonString))); // Handle UTF-8
-            const requestBody = { r2key: r2key, fileData: base64Data, contentType: 'application/json' };
+            const jsonString = JSON.stringify(finalSceneData, null, 2); // Pretty print JSON
+            // Convert JSON string to Base64 using browser's built-in btoa function
+            const base64Data = btoa(unescape(encodeURIComponent(jsonString))); // Handle potential UTF-8 issues
+
+            // Prepare the request body for the /api/storage/upload endpoint
+            const requestBody = {
+                r2key: r2key,
+                fileData: base64Data, // The Base64 encoded string
+                contentType: 'application/json' // Specify the content type
+            };
+
             console.log(`Uploading final JSON to R2 key: ${r2key}`);
             const response = await fetch(uploadApiUrl, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(requestBody)
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(requestBody) // Send the control structure as JSON
             });
-            const result:any = await response.json();
-            if (!response.ok) { throw new Error(result.error || result.message || `Upload failed with status ${response.status}`); }
+
+            const result:any = await response.json(); // Attempt to parse JSON response regardless of status
+
+            if (!response.ok) {
+                // Handle API errors based on the response body
+                console.error("Upload API call failed:", response.status, result);
+                // Use error message from API response if available
+                throw new Error(result?.error || result?.message || `Upload failed with status ${response.status}`);
+            }
+
+            // Success case
             console.log("Final JSON uploaded successfully:", result);
             uploadStatus = 'success';
             uploadMessage = `Scene JSON uploaded successfully!`;
-            finalJsonUrl = result.publicUrl;
+            finalJsonUrl = result.publicUrl; // Store the public URL from the API response
+
         } catch (err: any) {
             console.error("Error during final JSON upload:", err);
             uploadStatus = 'failed';
+            // Display the caught error message
             uploadMessage = `Upload failed: ${err.message}`;
         }
     }
 
 
-    // --- Modal Control Functions (Unchanged) ---
-    function openImageModal(url: string, name: string) { /* ... */ }
-    function closeImageModal() { /* ... */ }
-    function openModelModal(url: string, name: string) { /* ... */ }
-    function closeModelModal() { /* ... */ }
+    // --- Modal Control Functions ---
+    function openImageModal(url: string, name: string) {
+        selectedImageUrl = url;
+        selectedPropName = name;
+        showImageModal = true;
+    }
+    function closeImageModal() {
+        showImageModal = false;
+        selectedImageUrl = '';
+         selectedPropName = '';
+    }
+    function openModelModal(url: string, name: string) {
+        selectedModelUrl = url;
+        selectedPropName = name;
+        showModelModal = true;
+    }
+    function closeModelModal() {
+        showModelModal = false;
+        selectedModelUrl = '';
+        selectedPropName = '';
+    }
 
 </script>
 
@@ -670,18 +777,39 @@
 
 	<!-- Display Metadata -->
 	{#if metadata}
-	<div class="mb-6 p-4 border rounded-lg shadow-sm bg-gray-50"> /* ... metadata display unchanged ... */ </div>
+	<div class="mb-6 p-4 border rounded-lg shadow-sm bg-gray-50">
+		<h2 class="text-xl font-semibold mb-2 text-gray-700">Metadata</h2>
+		<p><strong>World Name (ID):</strong> <span class:text-red-600={!metadata.worldName}>{metadata.worldName || '(Not provided - CRITICAL ERROR!)'}</span></p>
+		<p><strong>Timestamp:</strong> {metadata.timestampUTC || '(Not provided)'}</p>
+		<p><strong>User ID (for images/models):</strong> {USER_ID_FOR_UPLOADS}</p>
+	</div>
 	{/if}
 
-    <!-- Final Upload Status -->
+    <!-- Final Upload Status (NEW Section) -->
     {#if uploadStatus === 'uploading'}
-    <div class="bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded relative mb-4 flex items-center" role="status"> /* ... uploading status unchanged ... */ </div>
+    <div class="bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded relative mb-4 flex items-center" role="status">
+        <svg class="animate-spin mr-3 h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+		<div><strong class="font-bold">Uploading Scene...</strong>
+        <span class="block sm:inline"> {uploadMessage || 'Processing...'}</span></div>
+	</div>
     {:else if uploadStatus === 'success'}
-    <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert"> /* ... success status unchanged ... */ </div>
+    <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
+		<strong class="font-bold">Upload Complete!</strong>
+        <span class="block sm:inline"> {uploadMessage}</span>
+        {#if finalJsonUrl}
+            <a href={finalJsonUrl} target="_blank" rel="noopener noreferrer" class="ml-2 text-sm underline text-green-800 hover:text-green-900 font-medium">View Uploaded JSON</a>
+        {/if}
+	</div>
     {:else if uploadStatus === 'failed'}
-    <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 whitespace-pre-wrap" role="alert"> /* ... failed status unchanged ... */ </div>
+    <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 whitespace-pre-wrap" role="alert">
+		<strong class="font-bold">Upload Failed!</strong>
+		<span class="block sm:inline"> {uploadMessage || 'An unknown error occurred during upload.'}</span>
+	</div>
     {:else if uploadStatus === 'skipped'}
-     <div class="bg-gray-100 border border-gray-400 text-gray-700 px-4 py-3 rounded relative mb-4" role="status"> /* ... skipped status unchanged ... */ </div>
+     <div class="bg-gray-100 border border-gray-400 text-gray-700 px-4 py-3 rounded relative mb-4" role="status">
+		<strong class="font-bold">Upload Skipped.</strong>
+		<span class="block sm:inline"> {uploadMessage || 'No scene JSON was uploaded.'}</span>
+	</div>
     {/if}
 
 
@@ -711,17 +839,46 @@
 			<div class="flex-1">
                 <h3 class="text-lg font-bold text-indigo-700 mb-2">{propState.propData.name || `Prop ${i + 1}`}</h3>
 				<p class="text-gray-600 mb-2 text-sm">{propState.propData.description || 'No description.'}</p>
-                <!-- Colors Display (unchanged) -->
-                 <div class="mb-2"> /* ... */ </div>
-                <!-- Transforms Display (unchanged) -->
-                 <div> /* ... */ </div>
-                <!-- Display final URLs (shows reused or generated) -->
-                {#if propState.propData.propImage}
-                <div class="mt-2 text-xs text-gray-500"> /* ... */ </div>
-                {/if}
-                 {#if propState.propData.propModel}
-                <div class="mt-1 text-xs text-gray-500"> /* ... */ </div>
-                {/if}
+                <!-- Colors Display -->
+                <div class="mb-2">
+                    <strong class="text-sm text-gray-800">Colors:</strong>
+                    {#if propState.propData.colors && propState.propData.colors.length > 0}
+                       <div class="flex flex-wrap gap-2 mt-1">
+							{#each propState.propData.colors as colorObj}
+                                {#if typeof colorObj === 'object' && colorObj !== null && !Array.isArray(colorObj)}
+                                    {#each Object.entries(colorObj) as [name, hex]}
+                                        <span class="text-xs font-medium px-2.5 py-0.5 rounded border" title={String(hex ?? 'Invalid Hex')}>
+                                            <span class="inline-block w-3 h-3 rounded-full mr-1 border border-gray-300 align-middle" style="background-color: {typeof hex === 'string' && hex.startsWith('#') ? hex : '#ffffff'};"></span>
+                                            {name} ({typeof hex === 'string' ? hex : 'Invalid'})
+                                        </span>
+                                    {/each}
+                                {:else} <span class="text-xs text-red-500 italic">Invalid Color Format</span> {/if}
+							{/each}
+						</div>
+                    {:else} <span class="text-sm text-gray-500 italic ml-2">None</span> {/if}
+                </div>
+                <!-- Transforms Display -->
+                <div>
+                    <strong class="text-sm text-gray-800">Transforms:</strong>
+                    <span class="text-sm ml-2">{Array.isArray(propState.propData.transforms) ? propState.propData.transforms.length : 0} instance(s)</span>
+                     {#if Array.isArray(propState.propData.transforms) && propState.propData.transforms.length > 0}
+                        <details class="text-xs mt-1">
+                            <summary class="cursor-pointer text-gray-600">Show Details</summary>
+                            <pre class="bg-gray-100 p-2 rounded mt-1 overflow-x-auto max-h-40"><code>{JSON.stringify(propState.propData.transforms, null, 2)}</code></pre>
+                        </details>
+                    {/if}
+                </div>
+                 <!-- Display final URLs if available (NEW) -->
+                 {#if propState.propData.propImage}
+                 <div class="mt-2 text-xs text-gray-500">
+                     <strong>Image URL:</strong> <a href={propState.propData.propImage} target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline break-all ml-1">{propState.propData.propImage}</a>
+                 </div>
+                 {/if}
+                  {#if propState.propData.propModel}
+                 <div class="mt-1 text-xs text-gray-500">
+                     <strong>Model URL:</strong> <a href={propState.propData.propModel} target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline break-all ml-1">{propState.propData.propModel}</a>
+                 </div>
+                 {/if}
             </div>
 
 			<!-- Right side: Image & Model Status (NEW STATUSES ADDED) -->

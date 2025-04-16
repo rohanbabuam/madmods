@@ -709,7 +709,7 @@
     }
 
 
-    // --- Modal Control Functions (Unchanged) ---
+    // --- Modal Control Functions ---
     function openImageModal(url: string, name: string) {
         selectedImageUrl = url;
         selectedPropName = name;
