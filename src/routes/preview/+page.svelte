@@ -6,7 +6,8 @@
 
 	// --- BabylonJS Imports ---
 	import {
-		Engine, Scene, ArcRotateCamera, Vector3, HemisphericLight, MeshBuilder, Color3, Color4, StandardMaterial, Texture, SceneLoader, Quaternion, Tools
+		Engine, Scene, ArcRotateCamera, Vector3, HemisphericLight, MeshBuilder, Color3, Color4, StandardMaterial, Texture, SceneLoader, Quaternion, Tools,
+        Mesh, BoundingInfo, CubeTexture
 	} from '@babylonjs/core';
 	import '@babylonjs/loaders/glTF'; // Import the GLTF loader plugin (for GLB)
 	import '@babylonjs/core/Loading/loadingScreen'; // Optional: Default loading screen
@@ -91,6 +92,13 @@
     let babylonScene: Scene | null = null;
     let babylonCanvas: HTMLCanvasElement | null = null;
 
+    var matCap:any;
+    let isBBVisible: boolean = true;
+
+
+    // debug boundingbox material
+    let vizMaterial:any;
+
 	// --- Lifecycle ---
 	onMount(() => {
 		const hostname = $page.url.hostname;
@@ -145,15 +153,23 @@
         const light = new HemisphericLight("light", new Vector3(0, 1, 0), babylonScene);
         light.intensity = 0.8;
 
+        const HDRURL = 'https://pub-48572794ea984ea9976e5d5856e58593.r2.dev/static/textures/equirectangular/sky.env'
+        // Import the .env file as a CubeTexture
+        const texture = new CubeTexture(HDRURL, babylonScene);
+        // Create a skybox mesh using this texture
+        const skybox = babylonScene.createDefaultSkybox(texture, true, 10000, 0);
+
+        
         // Ground Plane
         const ground = MeshBuilder.CreateGround("ground", { width: 10000, height: 10000 }, babylonScene);
 
+
         const gridMaterial = new GridMaterial("groundGridMaterial", babylonScene);
         gridMaterial.majorUnitFrequency = 8;
-        gridMaterial.minorUnitVisibility = 0.45;
+        gridMaterial.minorUnitVisibility = 0.2;
         gridMaterial.gridRatio = 5;
-        gridMaterial.mainColor = new Color3(1, 1, 1);
-        gridMaterial.lineColor = new Color3(0.4, 0.6, 0.9);
+        gridMaterial.mainColor = new Color3(86/255,130/255,3/255);
+        gridMaterial.lineColor = new Color3(1,1,1);
 
 
         // const gridMaterial = new GridMaterial("gridMaterial", babylonScene);
@@ -175,9 +191,20 @@
             }
         });
 
+
+        matCap = new StandardMaterial("", babylonScene);
+        matCap.disableLighting = true;
+
+        var matCapTexture = new Texture("https://i.imgur.com/Or6RuF1.jpg", babylonScene);
+        matCapTexture.coordinatesMode = Texture.SPHERICAL_MODE;
+
+        matCap.reflectionTexture = matCapTexture;
+
         // Resize handler
         window.addEventListener('resize', handleResize);
         console.log("BabylonJS scene created successfully.");
+
+        setupKeyboardControls(babylonScene);
     }
 
     function handleResize() {
@@ -198,67 +225,229 @@
 		}
 	}
 
-    // --- Function to Load Model into BabylonJS Scene (NEW) ---
-    async function loadModelIntoScene(propState: PropState, scene: Scene) {
-        if (!propState.modelUrl || !propState.propData.transforms || propState.propData.transforms.length === 0) {
-            console.error(`[Prop: ${propState.id}] Cannot load model: Missing model URL or transform data.`);
-            updatePropState(propState.id, { modelStatusMessage: 'Load Error: Missing URL/transform' });
-            return;
-        }
-        if (propState.modelLoadedInScene) {
-            console.log(`[Prop: ${propState.id}] Model already loaded or load initiated, skipping.`);
-            return;
-        }
 
-        // Mark as loading initiated to prevent duplicates
-        updatePropState(propState.id, { modelLoadedInScene: true, modelStatusMessage: 'Loading model into scene...' });
-
-        const transform = propState.propData.transforms[0]; // Use the first transform
-        const [tx, ty, tz] = transform.translation;
-        const [rx, ry, rz] = transform.rotation; // Degrees
-        const [sx, sy, sz] = transform.scale;
-
-        const modelUrl = propState.modelUrl;
-        const modelName = propState.id;
-
-        console.log(`[Prop: ${modelName}] Loading GLB from: ${modelUrl}`);
-        try {
-            // SceneLoader.ImportMeshAsync loads the model. "" imports all meshes. modelUrl is the path. scene is the target scene.
-            const result = await SceneLoader.ImportMeshAsync(null, "", modelUrl, scene, undefined, ".glb");
-
-            if (result.meshes.length > 0) {
-                const rootMesh = result.meshes[0]; // Often the first mesh is the root or a container
-                rootMesh.name = `${modelName}_root`; // Give it a unique name
-
-                // --- Apply Transform ---
-                // Scale (Divide by configured factor)
-                rootMesh.scaling = new Vector3(sx / MODEL_SCALE_DIVISOR, sy / MODEL_SCALE_DIVISOR, sz / MODEL_SCALE_DIVISOR);
-                
-                // Position
-                rootMesh.computeWorldMatrix(true);
-                var halfHeight = rootMesh.getBoundingInfo().boundingBox.extendSizeWorld.y*2;
-                rootMesh.position = new Vector3(tx/MODEL_SCALE_DIVISOR, ty/MODEL_SCALE_DIVISOR + halfHeight, tz/MODEL_SCALE_DIVISOR);
-
-                // Rotation (Convert degrees to radians and apply as Quaternion)
-                const yawRad = Tools.ToRadians(ry);   // Y-axis rotation
-                const pitchRad = Tools.ToRadians(rx); // X-axis rotation
-                const rollRad = Tools.ToRadians(rz);  // Z-axis rotation
-                rootMesh.rotationQuaternion = Quaternion.RotationYawPitchRoll(yawRad, pitchRad, rollRad);
-
-
-                console.log(`[Prop: ${modelName}] Model loaded and placed successfully.`);
-                updatePropState(propState.id, { modelStatusMessage: 'Model loaded in scene.' });
+    // --- Function to setup keyboard controls ---
+function setupKeyboardControls(scene: Scene) {
+    // Track if ground is visible (start with visible by default)
+    let isGroundVisible = true;
+    
+    // Add keyboard event listener
+    window.addEventListener("keydown", (event) => {
+        // Check if 'g' key was pressed
+        if (event.key === 'g' || event.key === 'G') {
+            // Toggle ground visibility
+            isGroundVisible = !isGroundVisible;
+            
+            // Find the ground mesh and update its visibility
+            const ground = scene.getMeshByName("ground");
+            if (ground) {
+                ground.setEnabled(isGroundVisible);
+                console.log(`Ground ${isGroundVisible ? 'visible' : 'hidden'}`);
             } else {
-                 throw new Error("Loaded GLB contained no meshes.");
+                console.warn("Ground mesh not found!");
+            }
+        }
+        // Check if 'g' key was pressed
+        if (event.key === 'h' || event.key === 'H') {
+            // Toggle bb visibility
+            isBBVisible = !isBBVisible;
+
+            if(vizMaterial){
+                vizMaterial.alpha = isBBVisible == true ? 0.2 : 0; 
+            }
+        }
+
+    });
+    
+    console.log("Keyboard controls initialized. Press 'g' to toggle ground visibility.");
+}
+
+let boundingBoxMaterial: StandardMaterial | null = null;
+function getBoundingBoxMaterial(scene: Scene): StandardMaterial {
+    if (!boundingBoxMaterial) {
+        boundingBoxMaterial = new StandardMaterial("boundingBoxMat", scene);
+        boundingBoxMaterial.diffuseColor = new Color3(0, 1, 0); // Green
+        boundingBoxMaterial.alpha = 0.16; // Translucent
+        boundingBoxMaterial.wireframe = true; // Optional: makes it look like a wireframe box
+        // boundingBoxMaterial.emissiveColor = new Color3(0, 1, 0); // Use emissive if no scene lighting
+        // boundingBoxMaterial.disableLighting = true; // Use if using emissiveColor
+    }
+    return boundingBoxMaterial;
+}
+    // --- Function to Load Model into BabylonJS Scene (NEW) ---
+// --- Function to Load Model into BabylonJS Scene (MODIFIED for Multiple Transforms) ---
+async function loadModelIntoScene(propState: PropState, scene: Scene) {
+    // --- Initial Checks ---
+    if (!propState.modelUrl || !propState.propData.transforms || propState.propData.transforms.length === 0) {
+        console.error(`[Prop: ${propState.id}] Cannot load model: Missing model URL or transform data.`);
+        updatePropState(propState.id, { modelStatusMessage: 'Load Error: Missing URL/transform' });
+        return;
+    }
+    if (propState.modelLoadedInScene) {
+        console.log(`[Prop: ${propState.id}] Model already loaded or load initiated, skipping.`);
+        return;
+    }
+
+    updatePropState(propState.id, { modelLoadedInScene: true, modelStatusMessage: 'Loading model...' });
+
+    const modelUrl = propState.modelUrl;
+    const modelName = propState.id;
+
+    console.log(`[Prop: ${modelName}] Loading GLB from: ${modelUrl}`);
+    let result: any; // Declare result outside try to potentially use in finally/catch for cleanup
+
+    try {
+        result = await SceneLoader.ImportMeshAsync(null, "", modelUrl, scene, undefined, ".glb");
+
+        if (!result.meshes || result.meshes.length === 0) {
+            throw new Error("Loaded GLB contained no meshes.");
+        }
+
+        // --- Find the Mesh with Actual Geometry ---
+        let geometryMeshTemplate: Mesh | null = null;
+        for (const mesh of result.meshes) {
+            if (mesh instanceof Mesh && mesh.getTotalVertices() > 0) {
+                mesh.material = matCap;
+                geometryMeshTemplate = mesh;
+                console.log(`[Prop: ${modelName}] Found mesh with geometry to use as template: ${mesh.name}`);
+                break;
+            }
+        }
+
+        if (!geometryMeshTemplate) {
+            console.error(`[Prop: ${modelName}] Loaded model from ${modelUrl} contains no meshes with geometry. Meshes found:`, result.meshes.map((m: AbstractMesh) => ({ name: m.name, type: m.getClassName(), vertices: m.getTotalVertices() })));
+            throw new Error("No mesh with renderable geometry found in the loaded model.");
+        }
+
+        geometryMeshTemplate.name = `${modelName}_geometry_template`;
+        geometryMeshTemplate.isVisible = false; // Hide the template
+
+        // --- Instance Creation and Transformation ---
+        const transforms = propState.propData.transforms;
+        const transformCount = transforms.length;
+        vizMaterial = getBoundingBoxMaterial(scene); // Get the shared material
+
+        console.log(`[Prop: ${modelName}] Creating ${transformCount} instance(s) from template '${geometryMeshTemplate.name}'.`);
+
+        transforms.forEach((transform, index) => {
+            const [tx, ty, tz] = transform.translation;
+            const [rx, ry, rz] = transform.rotation; // Degrees
+            const [sx, sy, sz] = transform.scale;
+
+            const instanceName = `${modelName}_instance_${index}`;
+            let instance: InstancedMesh | null = null;
+
+            try {
+                instance = geometryMeshTemplate!.createInstance(instanceName); // Use non-null assertion as we checked geometryMeshTemplate
+            } catch (instanceError) {
+                console.error(`[Prop: ${modelName}] Failed to create instance ${index} from template '${geometryMeshTemplate?.name}'. Error:`, instanceError);
+                return; // Skip this instance
             }
 
-        } catch (err: any) {
-            console.error(`[Prop: ${modelName}] Error loading model into BabylonJS scene:`, err);
-             updatePropState(propState.id, { modelStatusMessage: `Load Error: ${err.message}`, modelLoadedInScene: false /* Allow retry? maybe not */ });
-             // Optionally, mark model status as failed here if loading is critical
-             // updatePropState(propState.id, { modelStatus: 'failed', modelStatusMessage: `Load Error: ${err.message}`});
-        }
+            if (instance) {
+                console.log(`[Prop: ${modelName}] Applying transform ${index}: T[${tx},${ty},${tz}] R[${rx},${ry},${rz}] S[${sx},${sy},${sz}]`);
+
+                // Apply transformations to the instance
+                instance.scaling = new Vector3(sx / MODEL_SCALE_DIVISOR, sy / MODEL_SCALE_DIVISOR, sz / MODEL_SCALE_DIVISOR);
+                instance.position = new Vector3(tx / MODEL_SCALE_DIVISOR, ty / MODEL_SCALE_DIVISOR, tz / MODEL_SCALE_DIVISOR);
+                const yawRad = Tools.ToRadians(ry);
+                const pitchRad = Tools.ToRadians(rx);
+                const rollRad = Tools.ToRadians(rz);
+                instance.rotationQuaternion = Quaternion.RotationYawPitchRoll(yawRad, pitchRad, rollRad);
+                instance.isVisible = true;
+                instance.setEnabled(true);
+
+                // --- Bounding Box Calculation and Visualization ---
+                try {
+                    // CRITICAL: Ensure world matrix is up-to-date *after* setting transforms
+                    instance.computeWorldMatrix(true);
+
+                    // Get the bounding info which now reflects the world matrix
+                    const boundingInfo = instance.getBoundingInfo();
+
+                    // Check if boundingInfo is valid (it might not be immediately after creation in rare cases)
+                    if (!boundingInfo) {
+                         console.warn(`[Prop: ${modelName}] Instance ${index} ('${instance.name}') has no bounding info after computeWorldMatrix.`);
+                         return; // Skip bounding box creation for this instance
+                    }
+
+                    const boundingBox = boundingInfo.boundingBox;
+
+                    // Dimensions of the bounding box in world space
+                    const worldExtend = boundingBox.extendSizeWorld;
+                    const worldWidth = worldExtend.x * 2;
+                    const worldHeight = worldExtend.y * 2;
+                    const worldDepth = worldExtend.z * 2;
+
+                    // Center of the bounding box in world space
+                    const worldCenter = boundingBox.centerWorld;
+
+                     // Check for invalid dimensions (can happen if model is scaled to zero or has issues)
+                    if (worldWidth <= 0 || worldHeight <= 0 || worldDepth <= 0 || !isFinite(worldWidth) || !isFinite(worldHeight) || !isFinite(worldDepth)) {
+                        console.warn(`[Prop: ${modelName}] Instance ${index} ('${instance.name}') has invalid bounding box dimensions: W=${worldWidth}, H=${worldHeight}, D=${worldDepth}. Skipping bounding box mesh.`);
+                        return;
+                    }
+
+                    console.log(`[Prop: ${modelName}] Instance ${index} World BBox - Center: ${worldCenter.toString()}, Size: W=${worldWidth.toFixed(2)}, H=${worldHeight.toFixed(2)}, D=${worldDepth.toFixed(2)}`);
+
+
+                    // Create the visualization box mesh
+                    const boxViz = MeshBuilder.CreateBox(`${instanceName}_bbox`, {
+                        width: worldWidth,
+                        height: worldHeight,
+                        depth: worldDepth
+                    }, scene);
+
+                    // Position the visualization box at the center of the instance's world bounding box
+                    boxViz.position = worldCenter;
+
+                    // IMPORTANT: The world bounding box is Axis-Aligned (AABB).
+                    // If you want the box to rotate *exactly* with the instance (Oriented Bounding Box - OBB),
+                    // it's more complex. For an AABB visualization, we don't apply the instance's rotation to the box.
+                    // If OBB is needed, you'd typically create a box of size 1, apply the instance's rotationQuaternion,
+                    // scale it appropriately, and position it at the instance's pivot or calculated center.
+                    // Let's stick to AABB for now as it's usually what's needed for debugging bounds.
+                    // boxViz.rotationQuaternion = instance.rotationQuaternion.clone(); // Uncomment ONLY if you need OBB *and* understand implications
+
+                    // Apply the translucent material
+                    boxViz.material = vizMaterial;
+
+                    // Make sure it's visible and enabled
+                    boxViz.isVisible = true;
+                    boxViz.setEnabled(true);
+
+                    instance.position.y += worldHeight/2;
+
+                    // Optional: Parent the bounding box to the instance so it moves with it
+                    // boxViz.parent = instance;
+                    // If parented, the position might need adjustment depending on the instance's pivot location relative to its bounding box center.
+                    // For simplicity and clear world-space representation, we'll leave it unparented for now.
+
+                    // Store reference for later cleanup
+
+                } catch (bboxError) {
+                     console.error(`[Prop: ${modelName}] Error creating bounding box for instance ${index}:`, bboxError);
+                }
+
+            } else {
+                 console.warn(`[Prop: ${modelName}] Instance ${index} creation returned null or failed unexpectedly.`);
+            }
+        });
+
+        console.log(`[Prop: ${modelName}] Model processing complete. ${transformCount} instance(s) placed.`);
+        updatePropState(propState.id, { modelStatusMessage: `Model loaded with ${transformCount} instance(s).` });
+
+    } catch (err: any) {
+        console.error(`[Prop: ${modelName}] Error during model load or instancing process:`, err);
+        updatePropState(propState.id, {
+            modelStatusMessage: `Load/Instance Error: ${err.message}`,
+            modelLoadedInScene: false
+        });
+        // Cleanup partially loaded assets and any created bounding boxes
+        result?.meshes?.forEach((m:any) => m.dispose());
+        result?.skeletons?.forEach((s: any) => s.dispose());
     }
+}
 
 
 	// --- Function to Trigger Image Generation ---
@@ -306,17 +495,19 @@
 		if (propIndex === -1) { console.warn(`[Prop: ${propId}] Image polling stopped: Prop not found.`); clearPollingInterval(propId, 'image'); return; }
 		let currentAttempts = receivedProps[propIndex].imageAttempts + 1; updatePropState(propId, { imageAttempts: currentAttempts });
 		if (currentAttempts > MAX_POLL_ATTEMPTS) { console.warn(`[Prop: ${propId}] Image polling timed out.`); updatePropState(propId, { imageStatus: 'failed', imageStatusMessage: 'Polling timed out.', modelStatus: 'skipped_image_failed' }); clearPollingInterval(propId, 'image'); return; }
-		//console.log(`[Prop: ${propId}] IMAGE Polling attempt ${currentAttempts}...`);
+		console.log(`[Prop: ${propId}] IMAGE Polling attempt ${currentAttempts}...`);
 		try {
 			const response = await fetch(statusUrl, { cache: 'no-store' });
 			if (response.status === 404) { if(receivedProps[propIndex].imageStatus === 'polling') { updatePropState(propId, { imageStatusMessage: `Waiting for image status... (Attempt ${currentAttempts})` }); } return; }
 			if (!response.ok) throw new Error(`HTTP error ${response.status} fetching image status`);
-			const statusReport: any = await response.json(); console.log(`[Prop: ${propId}] Received IMAGE status:`, statusReport.status);
+			const statusReport: any = await response.json(); 
+            console.log(`[Prop: ${propId}] Received IMAGE status:`, statusReport.status);
             const latestPropState = receivedProps[propIndex];
 			switch (statusReport.status) {
 				case 'success':
 					if (!statusReport.r2ImagePath) throw new Error("Image status 'success' but missing 'r2ImagePath'.");
-					const fullImageUrl = `${R2_PUBLIC_URL_BASE}/${statusReport.r2ImagePath}`; console.log(`[Prop: ${propId}] Image generation successful! URL: ${fullImageUrl}`);
+					const fullImageUrl = `${R2_PUBLIC_URL_BASE}/${statusReport.r2ImagePath}`; 
+                    console.log(`[Prop: ${propId}] Image generation successful! URL: ${fullImageUrl}`);
 					updatePropState(propId, { imageStatus: 'success', imageUrl: fullImageUrl, imageStatusMessage: 'Image generated.', propDataUpdates: { propImage: fullImageUrl } });
 					clearPollingInterval(propId, 'image');
                     const finalPropStateForModel = receivedProps.find(p => p.id === propId);
@@ -324,7 +515,7 @@
                     else { console.error(`[Prop: ${propId}] Prop vanished before triggering model generation!`); updatePropState(propId, { modelStatus: 'failed', modelStatusMessage: 'Internal error: Prop data lost.' }); }
 					break;
 				case 'failure': case 'error':
-					console.error(`[Prop: ${propId}] Image generation failed. Reason: ${statusReport.message || statusReport.errorDetails || 'Unknown error'}`);
+                console.error(`[Prop: ${propId}] Image generation failed. Reason: ${statusReport.message}${statusReport.errorDetails ? ` -- Details: ${statusReport.errorDetails}` : ''}`);
 					updatePropState(propId, { imageStatus: 'failed', imageStatusMessage: `Image Failed: ${statusReport.message || 'Unknown error'}`, modelStatus: 'skipped_image_failed' }); clearPollingInterval(propId, 'image'); break;
 				case 'processing': case 'generating':
 					updatePropState(propId, { imageStatus: 'generating', imageStatusMessage: `Generating image... (Attempt ${currentAttempts})` }); break;
@@ -351,7 +542,8 @@
 			const response = await fetch(MODEL_GENERATION_ENDPOINT, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(requestBody) });
 			if (!response.ok) { let errorBody = `HTTP ${response.status}: ${response.statusText}`; try { const errorJson: any = await response.json(); errorBody = errorJson.message || errorJson.error || JSON.stringify(errorJson); } catch (e) { /* ignore */ } throw new Error(`Failed to enqueue model: ${errorBody}`); }
 			const result: any = await response.json(); if (!result.statusKey) throw new Error("Model enqueue response missing 'statusKey'.");
-			const fullModelStatusUrl = `${R2_PUBLIC_URL_BASE}/${result.statusKey}`; console.log(`[Prop: ${propID}] Model task enqueued. Status URL: ${fullModelStatusUrl}`);
+			const fullModelStatusUrl = `${R2_PUBLIC_URL_BASE}/${result.statusKey}`; 
+            console.log(`[Prop: ${propID}] Model task enqueued. Status URL: ${fullModelStatusUrl}`);
 			updatePropState(propState.id, { modelStatus: 'polling', modelStatusUrl: fullModelStatusUrl, modelStatusMessage: 'Model Queued. Waiting...', modelAttempts: 0 });
 			startModelPolling(propState.id, fullModelStatusUrl);
 		} catch (err: any) {
@@ -379,12 +571,14 @@
 			const response = await fetch(statusUrl, { cache: 'no-store' });
 			if (response.status === 404) { if(receivedProps[propIndex].modelStatus === 'polling') { updatePropState(propId, { modelStatusMessage: `Waiting for model status... (Attempt ${currentAttempts})` }); } return; }
 			if (!response.ok) throw new Error(`HTTP error ${response.status} fetching model status`);
-			const statusReport: any = await response.json(); console.log(`[Prop: ${propId}] Received MODEL status:`, statusReport.status);
+			const statusReport: any = await response.json(); 
+            //console.log(`[Prop: ${propId}] Received MODEL status:`, statusReport.status);
 			switch (statusReport.status) {
 				case 'success':
 					if (!statusReport.r2ModelPath) throw new Error("Model status 'success' but missing 'r2ModelPath'.");
 					if (!statusReport.r2ModelPath.toLowerCase().endsWith('.glb')) { throw new Error(`Model success but path is not a .glb file: ${statusReport.r2ModelPath}`); }
-					const fullModelUrl = `${R2_PUBLIC_URL_BASE}/${statusReport.r2ModelPath}`; console.log(`[Prop: ${propId}] Model generation successful! URL: ${fullModelUrl}`);
+					const fullModelUrl = `${R2_PUBLIC_URL_BASE}/${statusReport.r2ModelPath}`; 
+                    console.log(`[Prop: ${propId}] Model generation successful! URL: ${fullModelUrl}`);
 					updatePropState(propId, { modelStatus: 'success', modelUrl: fullModelUrl, modelStatusMessage: 'Model generated.', propDataUpdates: { propModel: fullModelUrl } });
 					clearPollingInterval(propId, 'model');
 
@@ -478,6 +672,8 @@
 			})
 			.done((finalJson: any) => {
 				console.log('Stream finished successfully.'); isLoading = false;
+                console.log('finalJson::')
+                console.log(finalJson);
                 let metadataError = false;
                 if (!metadata) { console.error("Stream finished, but no metadata received."); if (!error) error = "Stream completed, but failed to receive essential metadata."; metadataError = true; }
                 else if (!metadata.worldName) { console.error("Stream finished, metadata received but missing worldName."); if (!error) error = "Stream completed, but metadata is missing required worldName."; metadataError = true; }
@@ -626,7 +822,7 @@
     </div>
 
 	<!-- BabylonJS Canvas -->
-	<canvas id="renderCanvas" bind:this={babylonCanvas} class="flex-grow w-full h-full outline-none focus:outline-none" touch-action="none"></canvas>
+	<canvas id="renderCanvas" bind:this={babylonCanvas} class="flex-grow w-full h-full outline-none focus:outline-none"></canvas>
 
 	<!-- Bottom Control Bar -->
 	<div class="absolute bottom-0 left-0 right-0 p-4 bg-gray-800 bg-opacity-90 shadow-inner z-20">

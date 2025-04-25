@@ -7,8 +7,8 @@
 	// --- Configuration ---
 	// IMPORTANT: Replace with your actual R2 public bucket URL if not using env vars
 	const R2_PUBLIC_URL_BASE = 'https://pub-48572794ea984ea9976e5d5856e58593.r2.dev';
-	const IMAGE_GENERATION_ENDPOINT = 'https://imagegeneration.madmods.world';
-	const MODEL_GENERATION_ENDPOINT = 'https://modelgeneration.madmods.world';
+	let IMAGE_GENERATION_ENDPOINT = 'https://imagegeneration.madmods.world';
+	let MODEL_GENERATION_ENDPOINT = 'https://modelgeneration.madmods.world';
 	const POLLING_INTERVAL_MS = 1000; // Poll every 1 second
 	const MAX_POLL_DURATION_MS = 5 * 60 * 1000; // 5 minutes timeout for polling
 	const MAX_POLL_ATTEMPTS = Math.round(MAX_POLL_DURATION_MS / POLLING_INTERVAL_MS);
@@ -80,11 +80,16 @@
 	// --- Set API URLs on Component Mount ---
 	onMount(() => {
 		const hostname = $page.url.hostname;
+		let domainPrefix = ''
 		const dev = hostname.includes('localhost') || hostname === '127.0.0.1';
+		if(dev){
+			domainPrefix = 'https://madmods.world'
+		}
 		// Use relative paths for production builds, absolute for local dev potentially hitting deployed APIs
-		claudeApiUrl = dev ? 'https://madmods.world/api/ai/claude-streaming' : '/api/ai/claude-streaming';
+		claudeApiUrl = domainPrefix + '/api/ai/claude-streaming';
         // Adjust local dev URL for upload API if different from page origin
-        uploadApiUrl = dev ? 'https://madmods.world/api/storage/upload' : '/api/storage/upload';
+        uploadApiUrl = domainPrefix + '/api/storage/upload';
+
 		console.log('Claude API URL set to:', claudeApiUrl);
 		console.log('Upload API URL set to:', uploadApiUrl);
 	});
@@ -737,7 +742,7 @@
 	<title>Generative 3D World Building Pipeline</title>
 </svelte:head>
 
-<div class="container mx-auto p-6 font-sans">
+<div class="container mx-auto p-6 font-sans mt-20">
 	<h1 class="text-3xl font-bold mb-6 text-gray-800">Generative 3D World Building Pipeline</h1>
 
 	<!-- Prompt Input Area -->

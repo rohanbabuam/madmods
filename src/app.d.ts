@@ -8,6 +8,7 @@ declare namespace App {
 	interface Platform {
 		env: {
 			MADMODS_R2: R2Bucket;
+			IMAGE_GENERATION_QUEUE: Queue;
 		};
 		context: {
 			waitUntil(promise: Promise<any>): void;
