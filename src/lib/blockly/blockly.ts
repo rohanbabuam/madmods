@@ -1,5 +1,4 @@
-// src/lib/blockly/blockly.ts
-import { Ammo as AmmoInitializer } from "./ammo/ammo.js";
+
 import introJs from "intro.js";
 import 'intro.js/introjs.css';
 import * as Blockly from 'blockly/core';
@@ -23,6 +22,49 @@ import { setModelUrlResolver } from './3d/world/index';
 
 // Import 3D engine
 import { ThreeD } from "./3d/index.js"; // Assuming path is correct
+
+// src/lib/blockly/3d/blockly.ts
+import { browser } from '$app/environment'; // SvelteKit's environment check
+
+let AmmoInstance: any = null; // Cache the initialized instance (use proper Ammo type if available)
+let ammoPromise: Promise<any> | null = null; // Track the initialization promise
+
+// Function to safely get the initialized Ammo instance, only loads/runs in browser
+async function getAmmo() {
+    // 1. Check if running on the server - bail out if so.
+    if (!browser) {
+        console.warn("Attempted to get Ammo.js instance on the server. Skipping.");
+        // Decide what to return: null, undefined, or throw an error.
+        // Throwing might be safer if calling code absolutely expects Ammo.
+        // Returning null requires calling code to check.
+        return null;
+        // OR: throw new Error("Ammo.js cannot be initialized on the server.");
+    }
+
+    // 2. Return cached instance if already initialized
+    if (AmmoInstance) {
+        return AmmoInstance;
+    }
+
+    // 3. If initialization isn't already in progress, start it
+    if (!ammoPromise) {
+        ammoPromise = (async () => {
+            console.log("Dynamically importing Ammo.js...");
+            // Use the correct path/package name for your ammo.js build
+            const AmmoModule = await import('ammo.js');
+            // Depending on how ammo.js exports, you might need .default
+            const AmmoInit = AmmoModule.default || AmmoModule;
+            console.log("Initializing Ammo.js...");
+            AmmoInstance = await AmmoInit(/* Optional config object for Ammo */);
+            console.log("Ammo.js Initialized!");
+            return AmmoInstance;
+        })();
+    }
+
+    // 4. Return the promise (resolves to the instance)
+    // Subsequent calls while initializing will get the same promise.
+    return ammoPromise;
+}
 
 // Define the type for the resolver function for clarity
 export type ModelUrlResolver = (name: string) => string | null;
@@ -207,24 +249,29 @@ async function run(reset: boolean = false, physics: boolean = true) {
         return;
     }
 
+    let ammoInstance = await getAmmo();
+    if (!ammoInstance) {
+        console.error("Ammo.js not available. Cannot initialize physics world.");
+        //return; // Or handle the error appropriately
+        ammoInstance = false;
+    }
+
+    // Now you can safely use the 'Ammo' object
+    console.log("Setting up physics with Ammo:", ammoInstance);
+
+
     if (physics && !ammoInstance) {
         try {
             console.log("Attempting to initialize Ammo physics library via import...");
 
-            // 1. Check if the Ammo *initializer function* was imported correctly
-            //    We renamed the import to AmmoInitializer for clarity
-            if (!AmmoInitializer || typeof AmmoInitializer !== 'function') {
-                // This error shouldn't happen if the import worked, but good practice to check
-                throw new Error("Ammo initializer function not imported correctly or is not a function.");
-            }
-
+            
             console.log("Ammo initializer imported. Calling it...");
             // Log the initializer function itself (optional)
             // console.log(AmmoInitializer);
 
             // 2. Call the imported initializer function - it returns a Promise!
             //    Assign the resolved value (the actual Ammo API object) to your variable
-            ammoInstance = await AmmoInitializer(); // <--- Use the imported Initializer here!
+            //ammoInstance = await AmmoInitializer(); // <--- Use the imported Initializer here!
 
             threeD.ammo = ammoInstance; // Assign the initialized instance
             console.log("Ammo initialized successfully via import.", ammoInstance);
