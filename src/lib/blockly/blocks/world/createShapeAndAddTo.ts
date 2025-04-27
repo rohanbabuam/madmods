@@ -32,6 +32,11 @@ export let createShapeAndAddTo = {
     if (shape === "") return "";
     if (coords === "") return "";
 
-    return `threeD.createShapeAndAddTo(${shape}, ${variable}, ${coords});`;
+    // --- BEFORE ---
+    // return `threeD.createShapeAndAddTo(${shape}, ${variable}, ${coords});`;
+
+    // --- AFTER ---
+    // Add 'await' to the generated code
+    return `await threeD.createShapeAndAddTo(${shape}, ${variable}, ${coords});\n`;
   },
 };

@@ -1,5 +1,5 @@
 // src/lib/blockly/blockly.ts
-//import { Ammo } from "./ammo/ammo.js"; // Assuming path is correct
+import { Ammo as AmmoInitializer } from "./ammo/ammo.js";
 import introJs from "intro.js";
 import 'intro.js/introjs.css';
 import * as Blockly from 'blockly/core';
@@ -15,16 +15,23 @@ import * as physics from "./blocks/physics";
 import * as lighting from "./blocks/lighting";
 import * as camera from "./blocks/camera";
 
+// Import the function to *set* the resolver in the world module
+import { setModelUrlResolver } from './3d/world/index';
+
 // Import the async initializer function
 // import { initializeBlocklyInstance } from "./blocks/initializer"; // Adjusted path if needed
 
 // Import 3D engine
 import { ThreeD } from "./3d/index.js"; // Assuming path is correct
 
+// Define the type for the resolver function for clarity
+export type ModelUrlResolver = (name: string) => string | null;
+
 // --- Module-level variables ---
 let physicsEnabled = false;
 let inspectorEnabled = false;
-let ammo: any = null; // Type appropriately if possible
+// Variable to hold the *initialized* Ammo instance
+let ammoInstance: any = null; // Use a more specific type if you have Ammo types installed
 let activeCamera = "ArcRotate";
 let threeD: ThreeD | null = null;
 let blocklyWorkspace: Blockly.WorkspaceSvg | null = null;
@@ -101,43 +108,89 @@ function setupEventInitializer(workspaceInstance: Blockly.WorkspaceSvg, runCallb
             }
         }
         if (
-            ev.type === Blockly.Events.BLOCK_MOVE ||
-            ev.type === Blockly.Events.BLOCK_CHANGE ||
-            ev.type === Blockly.Events.BLOCK_DELETE ||
-            ev.type === Blockly.Events.BLOCK_CREATE
-        ) {
-
-            // Animation block specific logic (simplified example)
-            if (ev.type === Blockly.Events.BLOCK_CREATE && ev.blockId) {
-                 const newBlock = workspaceInstance.getBlockById(ev.blockId);
-                 if (newBlock?.type === 'animationLoop' && newBlock.getFieldValue("NAME") === "animation") {
-                      const uniqueName = getUniqueNameForField("animation", newBlock);
-                      newBlock.setFieldValue(uniqueName, "NAME");
-                 }
-                 // Add logic to update dropdowns on other blocks if needed
+              ev.type === Blockly.Events.BLOCK_MOVE ||
+              ev.type === Blockly.Events.BLOCK_CHANGE ||
+              ev.type === Blockly.Events.BLOCK_DELETE ||
+              ev.type === Blockly.Events.BLOCK_CREATE
+            ) {
+              //Check to see if need to adjust any of the animation blocks
+              let eventBlockIds = ev.ids;
+              if (!eventBlockIds) {
+                eventBlockIds = [ev.blockId];
+              }
+              var allBlocks = workspace.getAllBlocks(true);
+              eventBlockIds.forEach((eventBlockId) => {
+                switch (ev.type) {
+                  case Blockly.Events.BLOCK_CREATE:
+                    let newBlock = workspace.getBlockById(eventBlockId);
+                    if (newBlock.type === "animationLoop") {
+                      // Set the name of new animationLoop to animation_x to be unique
+                      if (newBlock.getFieldValue("NAME") === "animation") {
+                        let newUniqueName = getUniqueNameForField("animation", newBlock);
+                        newBlock.setFieldValue(newUniqueName, "NAME");
+                      }
+                      // Iterate through all of the start animation blocks to add to drop down
+                      allBlocks.forEach((block) => {
+                        if (block.type === "animationStart" || block.type === "animationStop") {
+                          block["dropdownOptions"][newBlock.id] = newBlock.getFieldValue("NAME");
+                        }
+                      });
+                    }
+          
+                    if (newBlock.type === "animationStart" || newBlock.type === "animationStop") {
+                      let loops = [];
+                      // Add the animation loops to the dropdown
+                      allBlocks.forEach(function (block) {
+                        if (block.type === "animationLoop") {
+                          var name = block.getField("NAME").getValue();
+                          newBlock["dropdownOptions"][block.id] = name;
+                          loops.push(block.id);
+                        }
+                      });
+                    }
+                    break;
+                  case Blockly.Events.BLOCK_CHANGE:
+                    let changedBlock = workspace.getBlockById(eventBlockId);
+                    if (changedBlock.type === "animationLoop") {
+                      // Iterate through all of the start animation blocks to update the drop downs
+                      allBlocks.forEach((block) => {
+                        // Update the dropdown list
+                        if (block.type === "animationStart" || block.type === "animationStop") {
+                          block["dropdownOptions"][changedBlock.id] = changedBlock.getFieldValue("NAME");
+                          // Quickly switch dropdown selection to force refresh of selected text
+                          let currentValue = block.getField("ANIMATIONS").getValue();
+                          //@ts-ignore
+                          block.getField("ANIMATIONS").getOptions(false);
+                          block.getField("ANIMATIONS").setValue("none");
+                          block.getField("ANIMATIONS").setValue(currentValue);
+                        }
+                      });
+                    }
+                    break;
+                  case Blockly.Events.BLOCK_DELETE:
+                    // Iterate through all of the start animation blocks to update the drop downs
+                    allBlocks.forEach((block) => {
+                      // Update the dropdown list
+                      if (block.type === "animationStart" || block.type === "animationStop") {
+                        delete block["dropdownOptions"][eventBlockId];
+                        let currentValue = block.getField("ANIMATIONS").getValue();
+                        if (currentValue === eventBlockId) {
+                          block.getField("ANIMATIONS").setValue("none");
+                        }
+                      }
+                    });
+                    break;
+                }
+              });
+          
+              // Write to session storage
+              console.log("Writing workspace to session storage");
+              let json = Blockly.serialization.workspaces.save(workspace);
+              sessionStorage.setItem("workspace", JSON.stringify(json));
+          
+              // Refresh the scene
+              runCallback();
             }
-            // Add logic for BLOCK_CHANGE, BLOCK_DELETE for animations if needed
-
-            // --- Workspace Persistence ---
-            try {
-                 console.log("Writing workspace to session storage");
-                 const json = Blockly.serialization.workspaces.save(workspaceInstance);
-                 sessionStorage.setItem("workspace", JSON.stringify(json));
-            } catch (e) {
-                 console.error("Error saving workspace to session storage:", e);
-            }
-
-
-            // --- Refresh Scene ---
-            // Use a debounce mechanism if changes happen too rapidly
-            // For now, just call the run callback
-            console.log("Blockly change detected, triggering scene run...");
-            try {
-                await runCallback();
-            } catch(runError) {
-                console.error("Error during scene run triggered by Blockly change:", runError);
-            }
-        }
         else if (ev.type === Blockly.Events.UI && ev.element === 'flyout' && !ev.newValue) {
             // Flyout likely closed - newValue is often the state (e.g., true for open, false for closed)
             console.log('Flyout closed event detected');
@@ -154,26 +207,44 @@ async function run(reset: boolean = false, physics: boolean = true) {
         return;
     }
 
-    // Ensure Ammo is loaded if physics is enabled
-    if (physics && !ammo) {
+    if (physics && !ammoInstance) {
         try {
-            console.log("Loading ammo physics library for run...");
-            // Ensure Ammo is loaded globally or passed correctly
-            // This assumes Ammo is available on window or similar
-            // Adjust if Ammo needs explicit loading/passing
-            const AmmoModule = (window as any).Ammo;
-            if (!AmmoModule) throw new Error("Ammo library not found on window.");
-            ammo = await AmmoModule(); // Or however Ammo is initialized
-            threeD.ammo = ammo; // Assign to ThreeD instance
-            console.log("Ammo loaded successfully.");
+            console.log("Attempting to initialize Ammo physics library via import...");
+
+            // 1. Check if the Ammo *initializer function* was imported correctly
+            //    We renamed the import to AmmoInitializer for clarity
+            if (!AmmoInitializer || typeof AmmoInitializer !== 'function') {
+                // This error shouldn't happen if the import worked, but good practice to check
+                throw new Error("Ammo initializer function not imported correctly or is not a function.");
+            }
+
+            console.log("Ammo initializer imported. Calling it...");
+            // Log the initializer function itself (optional)
+            // console.log(AmmoInitializer);
+
+            // 2. Call the imported initializer function - it returns a Promise!
+            //    Assign the resolved value (the actual Ammo API object) to your variable
+            ammoInstance = await AmmoInitializer(); // <--- Use the imported Initializer here!
+
+            threeD.ammo = ammoInstance; // Assign the initialized instance
+            console.log("Ammo initialized successfully via import.", ammoInstance);
+
         } catch (err) {
-            console.error("Failed to load Ammo physics library:", err);
-            physicsEnabled = false; // Disable physics if loading failed
+            console.error("Failed to initialize Ammo physics library:", err);
+            physicsEnabled = false; // Disable physics if loading/initialization failed
             alert("Failed to load physics engine. Physics will be disabled.");
-            // Optionally update the physics button UI here
+            // Optionally update UI elements related to physics toggle
+            threeD.ammo = null;
+            ammoInstance = null; // Ensure it's null on failure too
         }
     } else if (!physics) {
-        threeD.ammo = null; // Ensure ammo is null if physics is off
+        // If physics is disabled, ensure the ammo instance is cleared
+        console.log("Physics is disabled. Clearing Ammo instance.");
+        threeD.ammo = null;
+        ammoInstance = null;
+    } else if (physics && ammoInstance) {
+        // If physics is enabled and already initialized, do nothing or log
+        console.log("Ammo physics already initialized.");
     }
 
     console.log("Generating code from Blockly workspace...");
@@ -292,30 +363,60 @@ function setupUI() {
      });
 
     // --- Dropdown Logic ---
-     const hideAllDropDowns = () => {
-        if (examplesDropDown) examplesDropDown.style.display = "none";
-        if (vrDropDown) vrDropDown.style.display = "none";
-     }
+    const hideAllDropDowns = () => {
+      if (examplesDropDown) examplesDropDown.style.display = "none";
+      if (vrDropDown) vrDropDown.style.display = "none";
+   }
 
-     examplesButton?.addEventListener('mouseup', (e) => {
-        e.preventDefault();
-        hideAllDropDowns();
-        if (examplesDropDown && getComputedStyle(examplesDropDown).display === "none") {
-            examplesDropDown.style.display = "flex";
-        } else if (examplesDropDown) {
-            examplesDropDown.style.display = "none";
-        }
-     });
+   // Use 'click' instead of 'mouseup' for better accessibility (handles keyboard)
+   examplesButton?.addEventListener('click', (e) => {
+      // 1. Check if the examples dropdown is currently visible *before* hiding all
+      const wasVisible = examplesDropDown && getComputedStyle(examplesDropDown).display !== "none";
 
-     vrButton?.addEventListener('mouseup', (e) => {
-        e.preventDefault();
-        hideAllDropDowns();
-        if (vrDropDown && getComputedStyle(vrDropDown).display === "none") {
-            vrDropDown.style.display = "flex";
-        } else if (vrDropDown) {
-            vrDropDown.style.display = "none";
-        }
-     });
+      // 2. Hide all dropdowns (ensures the other one closes)
+      hideAllDropDowns();
+
+      // 3. If it *wasn't* visible, show it now.
+      //    If it *was* visible, hideAllDropDowns already closed it.
+      if (!wasVisible && examplesDropDown) {
+          examplesDropDown.style.display = "flex";
+      }
+   });
+
+   vrButton?.addEventListener('click', (e) => {
+      // 1. Check if the VR dropdown is currently visible *before* hiding all
+      const wasVisible = vrDropDown && getComputedStyle(vrDropDown).display !== "none";
+
+      // 2. Hide all dropdowns (ensures the other one closes)
+      hideAllDropDowns();
+
+      // 3. If it *wasn't* visible, show it now.
+      //    If it *was* visible, hideAllDropDowns already closed it.
+      if (!wasVisible && vrDropDown) {
+          vrDropDown.style.display = "flex";
+      }
+   });
+
+   // --- Optional: Add click outside to close ---
+   // This makes the UX better, closing dropdowns if you click elsewhere.
+   document.addEventListener('click', (e) => {
+      // Check if the click target is NOT one of the dropdown buttons
+      // AND not INSIDE one of the dropdowns themselves.
+      const target = e.target as HTMLElement;
+      const isClickOnExamplesButton = examplesButton && examplesButton.contains(target);
+      const isClickOnVrButton = vrButton && vrButton.contains(target);
+      const isClickInsideExamplesDropdown = examplesDropDown && examplesDropDown.contains(target);
+      const isClickInsideVrDropdown = vrDropDown && vrDropDown.contains(target);
+
+      if (!isClickOnExamplesButton && !isClickOnVrButton && !isClickInsideExamplesDropdown && !isClickInsideVrDropdown) {
+          hideAllDropDowns();
+      }
+   });
+
+   // Prevent clicks inside the dropdown from triggering the document listener above
+   examplesDropDown?.addEventListener('click', (e) => e.stopPropagation());
+   vrDropDown?.addEventListener('click', (e) => e.stopPropagation());
+   // --- End Optional Click Outside Logic ---
 
      // Example loading
      const projects = document.getElementsByClassName("examples-dropdown-item");
@@ -491,6 +592,7 @@ const createCustomBlocks = () => {
     createCustomBlock("createShapeAndAddTo", world.createShapeAndAddTo);
     createCustomBlock("moveShape", world.moveShape);
     createCustomBlock("moveShapeAlong", world.moveShapeAlong);
+    createCustomBlock("moveShapeTowardsShape", world.moveShapeTowardsShape);
     createCustomBlock("rotate", world.rotate);
     createCustomBlock("clone", world.clone);
     createCustomBlock("remove", world.remove);
@@ -499,6 +601,7 @@ const createCustomBlocks = () => {
     createCustomBlock("getPosition", world.getPosition);
 
     // Shapes
+    createCustomBlock("customObject", shapes.customObject);
     createCustomBlock("sphere", shapes.sphere);
     createCustomBlock("box", shapes.box);
     createCustomBlock("wall", shapes.wall);
@@ -642,13 +745,13 @@ async function initializeBlocklyInstance(divId: string): Promise<{ workspace: Bl
       base: Blockly.Themes.Zelos, // Example base theme
       name: "customTheme",
       componentStyles: {
-        workspaceBackgroundColour: "#ccc",
-        toolboxBackgroundColour: "#5d5d73",
-        toolboxForegroundColour: "#fff",
+        workspaceBackgroundColour: "#fff",
+        toolboxBackgroundColour: "#705ccc",
+        toolboxForegroundColour: "#705ccc",
         flyoutBackgroundColour: "#3d3d53",
         flyoutForegroundColour: "#ddd",
         flyoutOpacity: 0.8,
-        scrollbarColour: "#797979",
+        scrollbarColour: "#705ccc",
         insertionMarkerColour: "#fff",
         insertionMarkerOpacity: 0.3,
         scrollbarOpacity: 0.4,
@@ -706,7 +809,7 @@ async function initializeBlocklyInstance(divId: string): Promise<{ workspace: Bl
 
 
 // --- Main Application Initialization Function ---
-export async function init(blocklyDivId: string = 'blocklyDiv', canvasId: string = 'runAreaCanvas') {
+export async function init(blocklyDivId: string = 'blocklyDiv', canvasId: string = 'runAreaCanvas', modelUrlResolver: ModelUrlResolver) {
     if (isAppInitialized) {
         console.warn("Application already initialized.");
         return;
@@ -723,6 +826,13 @@ export async function init(blocklyDivId: string = 'blocklyDiv', canvasId: string
         threeD.runRenderLoop();
         window.addEventListener("resize", () => threeD?.engine?.resize());
         console.log("3D engine initialized.");
+
+        // --- PASS THE RESOLVER TO THE 3D WORLD ---
+        // Call the setter function we will define in step 3
+        console.log('Setting model URL resolver for the 3D world...');
+        setModelUrlResolver(modelUrlResolver);
+        // --- END MODIFICATION ---
+
 
         // 2. Initialize Blockly Instance (awaits sequential loading inside)
         console.log("Initializing Blockly instance...");
@@ -807,6 +917,7 @@ export async function init(blocklyDivId: string = 'blocklyDiv', canvasId: string
         // Prevent further execution or hide main UI elements if needed
         isAppInitialized = false; // Reset flag on failure
     }
+
 }
 
 // Note: Do not call init() here directly.

@@ -14,6 +14,7 @@ export let start = {
   },
 
   updateDropDown: function () {
+    console.log(this.dropdownOptions)
     let fieldDropDown = new Blockly.FieldDropdown(() => {
       let optionsAsArray = [["none", "none"]];
       Object.keys(this.dropdownOptions).forEach((key) => {

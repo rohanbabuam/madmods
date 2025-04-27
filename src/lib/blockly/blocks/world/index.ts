@@ -7,6 +7,7 @@ import { createShapeAs } from "./createShapeAs";
 import { createShapeAndAddTo } from "./createShapeAndAddTo";
 import { moveShape } from "./moveShape";
 import { moveShapeAlong } from "./moveShapeAlong";
+import { moveShapeTowardsShape } from "./moveShapeTowardsShape";
 import { rotate } from "./rotate";
 import { clone } from "./clone";
 import { remove } from "./remove";
@@ -25,6 +26,7 @@ export {
   createShapeAndAddTo,
   moveShape,
   moveShapeAlong,
+  moveShapeTowardsShape,
   rotate,
   clone,
   remove,

@@ -6,5 +6,6 @@ import { cone } from "./cone";
 import { torus } from "./torus";
 import { capsule } from "./capsule";
 import { ramp } from "./ramp";
+import { customObject } from "./customObject";
 
-export { sphere, box, wall, cylinder, cone, torus, capsule, ramp };
+export { sphere, box, wall, cylinder, cone, torus, capsule, ramp, customObject  };

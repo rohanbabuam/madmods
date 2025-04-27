@@ -446,6 +446,25 @@ export let toolbox = {
         },
         {
           kind: "block",
+          type: "moveShapeTowardsShape",
+          inputs: {
+            STEPS: {
+              shadow: {
+                type: "math_number",
+                fields: {
+                  NUM: 1, // Default steps value
+                },
+              },
+            },
+          },
+          // Optionally, define default variables if needed,
+          // but the block definition handles defaults now.
+          // fields: {
+          //   IGNORE_Y: "TRUE" // Default checkbox state (handled in block init now)
+          // }
+        },
+        {
+          kind: "block",
           type: "rotate",
           inputs: {
             DEGREES: {
@@ -806,6 +825,31 @@ export let toolbox = {
               },
             },
           },
+        },
+        {
+          kind: "block",
+          type: "customObject",
+          // Define shadows for inputs
+          inputs: {
+            SCALE: {
+              shadow: {
+                type: "math_number",
+                fields: {
+                  NUM: 1, // Default scale
+                },
+              },
+            },
+            MATERIAL: {
+              shadow: {
+                type: "none", // Or your default material block type
+              },
+            },
+          },
+          // Optionally set the default field value for NAME here too,
+          // though the block definition handles it.
+          // fields: {
+          //   NAME: "default_id"
+          // }
         },
       ],
     },

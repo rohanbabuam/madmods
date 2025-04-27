@@ -109,12 +109,27 @@ export class ThreeD {
   };
 
   // World functions
-  public createShape = (shapeBlock: ShapeBlock, coordsBlock: CoordsBlock) => {
-    world.createShape(shapeBlock, coordsBlock, this.scene, this.actionManagers);
+  // public createShape = (shapeBlock: ShapeBlock, coordsBlock: CoordsBlock) => {
+  //   world.createShape(shapeBlock, coordsBlock, this.scene, this.actionManagers);
+  // };
+
+  public createShape = async (shapeBlock: ShapeBlock, coordsBlock: CoordsBlock): Promise<void> => {
+    // Await the call
+    await world.createShape(shapeBlock, coordsBlock, this.scene, this.actionManagers);
   };
 
+// --- BEFORE ---
+/*
   public createShapeAndAddTo = (shapeBlock: ShapeBlock, parentBlock: ShapeBlock, coordsBlock: CoordsBlock) => {
     world.createShapeAndAddTo(shapeBlock, parentBlock, coordsBlock, this.scene, this.actionManagers);
+  };
+*/
+
+// --- AFTER ---
+  // Mark method as async
+  public createShapeAndAddTo = async (shapeBlock: ShapeBlock, parentBlock: ShapeBlock, coordsBlock: CoordsBlock): Promise<void> => {
+    // Await the call
+    await world.createShapeAndAddTo(shapeBlock, parentBlock, coordsBlock, this.scene, this.actionManagers);
   };
 
   public clone = (shapeBlock: ShapeBlock, coordsBlock: CoordsBlock) => {
@@ -131,6 +146,16 @@ export class ThreeD {
 
   public moveShapeAlong = (shapeBlock: ShapeBlock, axis: string, steps: number) => {
     world.moveShapeAlong(shapeBlock, axis, steps, this.scene);
+  };
+
+  // Add this new method
+  public moveShapeTowardsShape = (
+    shapeBlockA: ShapeBlock,
+    shapeBlockB: ShapeBlock,
+    steps: number,
+    ignoreY: boolean
+  ) => {
+    world.moveShapeTowardsShape(shapeBlockA, shapeBlockB, steps, ignoreY, this.scene);
   };
 
   public rotate = (shapeBlock: ShapeBlock, axis: string, degrees: number) => {
@@ -219,6 +244,7 @@ export class ThreeD {
       let gravityVector = new BABYLON.Vector3(0, -9.81, 0);
       let physicsPlugin = new BABYLON.AmmoJSPlugin(true, this.ammo);
       this.scene.enablePhysics(gravityVector, physicsPlugin);
+      console.log('ammo physics enabled')
     } else {
       this.scene.disablePhysicsEngine();
     }

@@ -36,6 +36,11 @@ export let createShapeAs = {
     if (shape === "") return "";
     if (coords === "") return "";
 
-    return `${variable} = ${shape}; threeD.createShape(${variable}, ${coords});`;
+    // --- BEFORE ---
+        // return `${variable} = ${shape}; threeD.createShape(${variable}, ${coords});`;
+
+        // --- AFTER ---
+        // Add 'await' before the threeD.createShape call in the generated code
+        return `${variable} = ${shape};\nawait threeD.createShape(${variable}, ${coords});\n`;
   },
 };

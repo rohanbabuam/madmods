@@ -7,6 +7,7 @@
 	import WorldViewerModal from '$lib/components/WorldViewerModal.svelte'; // Import the world viewer
 	import type { WorldPropData } from '$lib/components/WorldViewerModal.svelte'; // Import the type
 
+
 	// --- Scene Generation State ---
 	let isAnthropicLoading = false;
 	let anthropicPrompt = '';

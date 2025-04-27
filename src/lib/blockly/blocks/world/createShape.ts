@@ -20,6 +20,11 @@ export let createShape = {
         if (shape === "") return "";
         if (coords === "") return "";
 
-        return `threeD.createShape(${shape}, ${coords});`;
+        // --- BEFORE ---
+        // return `threeD.createShape(${shape}, ${coords});`;
+
+        // --- AFTER ---
+        // Add 'await' to the generated code
+        return `await threeD.createShape(${shape}, ${coords});\n`
     }
 };
