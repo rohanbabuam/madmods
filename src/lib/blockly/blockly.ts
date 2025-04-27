@@ -51,7 +51,7 @@ async function getAmmo() {
         ammoPromise = (async () => {
             console.log("Dynamically importing Ammo.js...");
             // Use the correct path/package name for your ammo.js build
-            const AmmoModule = await import('ammo.js');
+            const AmmoModule = await import('./ammo/ammo.js');
             // Depending on how ammo.js exports, you might need .default
             const AmmoInit = AmmoModule.default || AmmoModule;
             console.log("Initializing Ammo.js...");
