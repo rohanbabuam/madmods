@@ -192,8 +192,9 @@ export class ThreeD {
   };
 
   // Scene functions
-  public createScene = async (reset?: boolean, physics?: boolean) => {
+  public createScene = async (reset?: boolean, physicsActuallyEnabled?: boolean) => {
     console.log("Creating scene");
+    console.log(`createScene called. Reset: ${reset}, Physics Actually Enabled: ${physicsActuallyEnabled}`);
     // Unregister actions from previous scene
     if (this.scene) {
       if (this.scene.actionManager) {
@@ -239,15 +240,54 @@ export class ThreeD {
     });
     this.actionManagers = [];
     this.scene.actionManager = new BABYLON.ActionManager();
-    if (physics === true) {
-      console.log("Enabling physics");
-      let gravityVector = new BABYLON.Vector3(0, -9.81, 0);
-      let physicsPlugin = new BABYLON.AmmoJSPlugin(true, this.ammo);
-      this.scene.enablePhysics(gravityVector, physicsPlugin);
-      console.log('ammo physics enabled')
-    } else {
-      this.scene.disablePhysicsEngine();
-    }
+
+
+
+    // --- Enable/Disable Physics Engine ---
+    // This is the check that PREVENTS the error:
+    if (physicsActuallyEnabled) {
+      // We only enter this block if run() determined physics should be on
+      // AND successfully got the Ammo instance and put it in this.ammo.
+
+      // Double-check this.ammo just in case (belt-and-suspenders)
+      if (this.ammo) {
+          console.log("Proceeding to enable Babylon.js physics with AmmoJSPlugin.");
+          try { // Keep try-catch for robustness within plugin init itself
+              const gravityVector = new BABYLON.Vector3(0, -9.81, 0);
+              // *** Correct Loading Point ***
+              // This line is now only reached if physicsActuallyEnabled is true AND this.ammo is valid.
+              this.physicsPlugin = new BABYLON.AmmoJSPlugin(true, this.ammo);
+
+              this.scene.enablePhysics(gravityVector, this.physicsPlugin);
+              console.log('Babylon.js physics engine enabled successfully with Ammo.');
+
+          } catch (pluginError) {
+              console.error("Error occurred *during* AmmoJSPlugin initialization/enabling:", pluginError);
+              // Handle potential errors *within* the plugin, even if this.ammo was valid
+              if (this.scene.isPhysicsEnabled()) {
+                  this.scene.disablePhysicsEngine();
+              }
+              this.physicsPlugin = null;
+              alert("Physics engine failed during initialization. Physics disabled.");
+          }
+      } else {
+          // This case should ideally not happen if run() logic is correct, but good to log
+          console.error("Logic Error: physicsActuallyEnabled was true, but this.ammo is null! Disabling physics.");
+          if (this.scene.isPhysicsEnabled()) {
+             this.scene.disablePhysicsEngine();
+          }
+          this.physicsPlugin = null;
+      }
+
+  } else {
+      // Physics is intended to be off (either not requested or Ammo failed to load)
+      console.log("Physics engine will remain disabled.");
+      if (this.scene.isPhysicsEnabled()) {
+         this.scene.disablePhysicsEngine();
+      }
+      this.physicsPlugin = null;
+  }
+  // --- End Physics Engine Enable/Disable ---
     return this.scene;
   };
 

@@ -30,40 +30,70 @@ let AmmoInstance: any = null; // Cache the initialized instance (use proper Ammo
 let ammoPromise: Promise<any> | null = null; // Track the initialization promise
 
 // Function to safely get the initialized Ammo instance, only loads/runs in browser
-async function getAmmo() {
-    // 1. Check if running on the server - bail out if so.
-    if (!browser) {
-        console.warn("Attempted to get Ammo.js instance on the server. Skipping.");
-        // Decide what to return: null, undefined, or throw an error.
-        // Throwing might be safer if calling code absolutely expects Ammo.
-        // Returning null requires calling code to check.
-        return null;
-        // OR: throw new Error("Ammo.js cannot be initialized on the server.");
-    }
+// Function to safely get the initialized Ammo instance, only loads/runs in browser
+async function getAmmo(): Promise<any | null> { // Explicit return type
+  // 1. Server check
+  if (!browser) {
+      console.warn("Attempted to get Ammo.js instance on the server. Skipping.");
+      return null;
+  }
 
-    // 2. Return cached instance if already initialized
-    if (AmmoInstance) {
-        return AmmoInstance;
-    }
+  // 2. Return cached instance if already initialized AND VALID
+  if (AmmoInstance) {
+      console.log("Returning cached Ammo instance.");
+      return AmmoInstance;
+  }
 
-    // 3. If initialization isn't already in progress, start it
-    if (!ammoPromise) {
-        ammoPromise = (async () => {
-            console.log("Dynamically importing Ammo.js...");
-            // Use the correct path/package name for your ammo.js build
-            const AmmoModule = await import('./ammo/ammo.js');
-            // Depending on how ammo.js exports, you might need .default
-            const AmmoInit = AmmoModule.default || AmmoModule;
-            console.log("Initializing Ammo.js...");
-            AmmoInstance = await AmmoInit;
-            console.log("Ammo.js Initialized!");
-            return AmmoInstance;
-        })();
-    }
+  // 3. If initialization isn't already in progress, start it
+  if (!ammoPromise) {
+      console.log("Starting Ammo.js dynamic import and initialization...");
+      ammoPromise = (async (): Promise<any | null> => { // Explicit promise type
+          try {
+              console.log("Dynamically importing Ammo.js...");
+              const AmmoModule = await import('./ammo/ammo.js');
+              const AmmoInit = AmmoModule.default || AmmoModule;
+              if (!AmmoInit || typeof AmmoInit.Ammo !== 'function') {
+                   console.error("Ammo.js module loaded but invalid format. Missing 'Ammo' function.");
+                   throw new Error("Invalid Ammo.js module structure.");
+              }
+              console.log("Initializing Ammo.js via Ammo()...");
+              const initializedAmmo = await AmmoInit.Ammo();
 
-    // 4. Return the promise (resolves to the instance)
-    // Subsequent calls while initializing will get the same promise.
-    return ammoPromise;
+              // *** CRITICAL CHECK ***
+              // Verify that the initialized object looks like a valid Ammo instance.
+              // Add checks for properties you KNOW should exist.
+              if (!initializedAmmo || typeof initializedAmmo.btVector3 !== 'function') {
+                   console.error("Ammo.js Ammo() call succeeded but returned invalid instance.", initializedAmmo);
+                   throw new Error("Ammo() returned invalid instance.");
+              }
+
+              console.log("Ammo.js Initialized Successfully!");
+              AmmoInstance = initializedAmmo; // Cache the VALID instance
+              console.log('>>> getAmmo: Successfully initialized. Type:', typeof AmmoInstance, 'Instance:', !!AmmoInstance);
+              return AmmoInstance;
+
+          } catch (err) {
+              console.error(">>> getAmmo: Ammo.js dynamic import or initialization FAILED:", err);
+              ammoPromise = null; // Reset promise on failure
+              AmmoInstance = null; // Ensure instance is null
+              return null; // Explicitly return null on failure
+          }
+      })();
+  } else {
+      console.log("Ammo.js initialization already in progress, returning existing promise.");
+  }
+
+  // 4. Return the promise. It will resolve to the instance OR null.
+  // We need to await this again here in case we're hitting the "already in progress" path
+  try {
+      const result = await ammoPromise;
+       console.log(">>> getAmmo: Promise resolved. Result:", !!result);
+       return result; // Will be the instance or null
+  } catch(err) {
+      // This catch might be redundant if the inner catch handles it, but safe to have.
+      console.error(">>> getAmmo: Error awaiting the ammoPromise:", err);
+      return null;
+  }
 }
 
 // Define the type for the resolver function for clarity
@@ -249,50 +279,41 @@ async function run(reset: boolean = false, physics: boolean = true) {
         return;
     }
 
-    let ammoInstance = await getAmmo();
-    if (!ammoInstance) {
-        console.error("Ammo.js not available. Cannot initialize physics world.");
-        //return; // Or handle the error appropriately
-        ammoInstance = false;
-    }
+    let localAmmoInstance: any = null;
+    let effectivePhysicsEnabled = false; // Start assuming physics is off or unavailable
 
-    // Now you can safely use the 'Ammo' object
-    console.log("Setting up physics with Ammo:", ammoInstance);
-
-
-    if (physics && !ammoInstance) {
+    // --- Ammo Initialization Logic ---
+    if (physics) { // Only attempt if physics is requested
+        console.log("Physics requested. Attempting to get/initialize Ammo...");
         try {
-            console.log("Attempting to initialize Ammo physics library via import...");
+            // Explicitly await the result here
+            localAmmoInstance = await getAmmo();
 
-            
-            console.log("Ammo initializer imported. Calling it...");
-            // Log the initializer function itself (optional)
-            // console.log(AmmoInitializer);
-
-            // 2. Call the imported initializer function - it returns a Promise!
-            //    Assign the resolved value (the actual Ammo API object) to your variable
-            //ammoInstance = await AmmoInitializer(); // <--- Use the imported Initializer here!
-
-            threeD.ammo = ammoInstance; // Assign the initialized instance
-            console.log("Ammo initialized successfully via import.", ammoInstance);
-
-        } catch (err) {
-            console.error("Failed to initialize Ammo physics library:", err);
-            physicsEnabled = false; // Disable physics if loading/initialization failed
-            alert("Failed to load physics engine. Physics will be disabled.");
-            // Optionally update UI elements related to physics toggle
-            threeD.ammo = null;
-            ammoInstance = null; // Ensure it's null on failure too
+            // *** STRICT CHECK ***
+            // Only proceed if getAmmo() returned a TRUTHY value (the valid instance)
+            if (localAmmoInstance) {
+                console.log("Ammo instance obtained successfully from getAmmo.");
+                threeD.ammo = localAmmoInstance; // Assign the valid instance
+                console.log('>>> run: Assigned ammo to threeD. Instance is now:', !!threeD.ammo);
+                effectivePhysicsEnabled = true; // Enable physics for the scene
+            } else {
+                // getAmmo() resolved but returned null/undefined (failure)
+                console.warn("getAmmo() completed but returned no valid instance. Physics will be disabled.");
+                threeD.ammo = null; // Ensure it's null
+            }
+        } catch (error) {
+            // This catches errors *during* the await getAmmo() call itself
+            console.error("Error occurred WHILE calling getAmmo():", error);
+            threeD.ammo = null; // Ensure null on error
         }
-    } else if (!physics) {
-        // If physics is disabled, ensure the ammo instance is cleared
-        console.log("Physics is disabled. Clearing Ammo instance.");
-        threeD.ammo = null;
-        ammoInstance = null;
-    } else if (physics && ammoInstance) {
-        // If physics is enabled and already initialized, do nothing or log
-        console.log("Ammo physics already initialized.");
+    } else {
+        // Physics is explicitly disabled for this run
+        console.log("Physics explicitly disabled for this run.");
+        threeD.ammo = null; // Ensure null if physics is off
     }
+    // --- End Ammo Logic ---
+
+    console.log(`Proceeding to scene creation. Effective Physics: ${effectivePhysicsEnabled}`);
 
     console.log("Generating code from Blockly workspace...");
     let code = '';
@@ -306,6 +327,7 @@ async function run(reset: boolean = false, physics: boolean = true) {
     }
 
     // Execute the generated code within the ThreeD context
+    console.log(`Executing generated code. Effective Physics: ${effectivePhysicsEnabled}`);
     console.log("Executing generated code...");
     try {
         // Construct the execution string carefully
