@@ -1,6 +1,5 @@
 // src/routes/+layout.server.ts
 import type { LayoutServerLoad } from './$types'; // Correct type for server layout load
-import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/public';
 
 let supabase_url, supabase_key;
 try{
