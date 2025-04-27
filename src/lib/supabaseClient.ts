@@ -14,36 +14,19 @@ let supabase_url:string, supabase_key:string;
  */
 
 export const createSupabaseServerClient = async (event: RequestEvent): Promise<SupabaseClient<Database>> => {
-    try{
-        const { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } = await import('$env/static/public');
-        // const { PRIVATE_GEMINI_API_KEY } = await import('$env/static/private');
-        supabase_url = PUBLIC_SUPABASE_URL;
-        supabase_key = PUBLIC_SUPABASE_ANON_KEY;
-      }
-      catch (err:any) {
-        console.error("Error during env var import:", err);
-        // geminiToken = event.platform?.env.PRIVATE_GEMINI_API_KEY;
-        supabase_url = event.platform?.env.PUBLIC_SUPABASE_URL;
-        supabase_key = event.platform?.env.PUBLIC_SUPABASE_ANON_KEY;
-      }
-
-	try {
-		// Attempt dynamic import (this is the async part)
-		const { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } = await import('$env/static/public');
-		supabase_url = PUBLIC_SUPABASE_URL;
-		supabase_key = PUBLIC_SUPABASE_ANON_KEY;
-        console.log("Successfully loaded Supabase config from $env/static/public");
-	} catch (err: any) {
-		// Fallback for environments where dynamic import might not work (like CF Workers)
-		console.warn("Failed to dynamically import $env/static/public, falling back to event.platform.env:", err.message);
-		supabase_url = event.platform?.env.PUBLIC_SUPABASE_URL;
-		supabase_key = event.platform?.env.PUBLIC_SUPABASE_ANON_KEY;
-        if (supabase_url && supabase_key) {
-             console.log("Successfully loaded Supabase config from event.platform.env");
-        } else {
-             console.error("Failed to load Supabase config from event.platform.env as well.");
-        }
-	}
+    let supabase_url, supabase_key;
+try{
+    const { PRIVATE_SUPABASE_URL, PRIVATE_SUPABASE_ANON_KEY } = await import('$env/static/public');
+    // const { PRIVATE_GEMINI_API_KEY } = await import('$env/static/private');
+    supabase_url = PRIVATE_SUPABASE_URL;
+    supabase_key = PRIVATE_SUPABASE_ANON_KEY;
+  }
+  catch (err:any) {
+    console.error("Error during env var import:", err);
+    // geminiToken = event.platform?.env.PRIVATE_GEMINI_API_KEY;
+    supabase_url = event.platform?.env.PRIVATE_SUPABASE_URL;
+    supabase_key = event.platform?.env.PRIVATE_SUPABASE_ANON_KEY;
+  }
 
 	// Validate that keys were successfully loaded
 	if (!supabase_url || !supabase_key) {
