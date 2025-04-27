@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import { browser } from '$app/environment';
-	import { PUBLIC_IMAGE_GENERATION_ENDPOINT, PUBLIC_MODEL_GENERATION_ENDPOINT, PUBLIC_R2_PUBLIC_URL_BASE, PUBLIC_USER_ID_FOR_UPLOADS } from '$env/static/public';
+
   const MAX_MODEL_POLL_ATTEMPTS = 60;
 
 	import { v4 as uuidv4 } from 'uuid';
@@ -20,6 +20,10 @@
 	let isLoading = $state(true);
 	let errorMsg: string | null = $state(null);
 	let selectedImageForModal = $state<GeneratedImage | null>(null);
+
+		let PUBLIC_MODEL_GENERATION_ENDPOINT="https://modelgeneration.madmods.world"
+let PUBLIC_IMAGE_GENERATION_ENDPOINT="https://imagegeneration.madmods.world"
+let PUBLIC_R2_PUBLIC_URL_BASE="https://pub-48572794ea984ea9976e5d5856e58593.r2.dev"
 
     interface GeneratedImage {
 		id: string;

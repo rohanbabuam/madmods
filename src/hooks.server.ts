@@ -24,7 +24,7 @@ if (allowedOrigins.length > 0) {
 // --- Supabase Auth Hook ---
 const supabaseHandle: Handle = async ({ event, resolve }) => {
     // Create a Supabase client specific to this server request
-    event.locals.supabase = createSupabaseServerClient(event);
+    event.locals.supabase = await createSupabaseServerClient(event);
 
     // Helper function to get the session
     event.locals.getSession = async () => {
