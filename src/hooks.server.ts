@@ -1,6 +1,8 @@
 // src/hooks.server.ts
 import type { Handle } from '@sveltejs/kit';
-import { createSupabaseServerClient } from '$lib/supabaseClient'; // Import helper
+//import { createSupabaseServerClient } from '$lib/supabaseClient'; // Import helper
+// Import from the NEW server location
+import { createSupabaseServerClient } from '$lib/server/supabase';
 import { sequence } from '@sveltejs/kit/hooks'; // Helper to chain hooks
 
 // --- Configuration ---
@@ -24,7 +26,8 @@ if (allowedOrigins.length > 0) {
 // --- Supabase Auth Hook ---
 const supabaseHandle: Handle = async ({ event, resolve }) => {
     // Create a Supabase client specific to this server request
-    event.locals.supabase = await createSupabaseServerClient(event);
+    //event.locals.supabase = await createSupabaseServerClient(event);
+    event.locals.supabase = createSupabaseServerClient(event); // Pass event here
 
     // Helper function to get the session
     event.locals.getSession = async () => {

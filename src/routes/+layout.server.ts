@@ -1,30 +1,33 @@
 // src/routes/+layout.server.ts
 import type { LayoutServerLoad } from './$types'; // Correct type for server layout load
-
-let supabase_url, supabase_key;
+import { PRIVATE_SUPABASE_URL as STATIC_SUPABASE_URL, PRIVATE_SUPABASE_ANON_KEY as STATIC_SUPABASE_ANON_KEY } from '$env/static/private'; 
 
 
 export const load: LayoutServerLoad = async ({ platform, locals: { getSession } }) => {
-    try{
-        const { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } = await import('$env/static/public');
-        // const { PRIVATE_GEMINI_API_KEY } = await import('$env/static/private');
-        supabase_url = PUBLIC_SUPABASE_URL;
-        supabase_key = PUBLIC_SUPABASE_ANON_KEY;
-      }
-      catch (err:any) {
-        console.error("Error during env var import:", err);
-        // geminiToken = event.platform?.env.PRIVATE_GEMINI_API_KEY;
-        supabase_url = platform?.env.PUBLIC_SUPABASE_URL;
-        supabase_key = platform?.env.PUBLIC_SUPABASE_ANON_KEY;
-      }
+  // --- Determine URL and Key for the Browser ---
+  let supabaseUrl = platform?.env?.PRIVATE_SUPABASE_URL;
+  let supabaseKey = platform?.env?.PRIVATE_SUPABASE_ANON_KEY;
 
+  if (!supabaseUrl) {
+      supabaseUrl = STATIC_SUPABASE_URL;
+      console.log('[Layout Server] Using static Supabase URL.'); // Log fallback
+  } else {
+       console.log('[Layout Server] Using platform Supabase URL.'); // Log platform usage
+  }
+  if (!supabaseKey) {
+      supabaseKey = STATIC_SUPABASE_ANON_KEY;
+       console.log('[Layout Server] Using static Supabase Key.'); // Log fallback
+  } else {
+       console.log('[Layout Server] Using platform Supabase Key.'); // Log platform usage
+  }
+  // --- End Determine URL and Key ---
     // Get the session from the helper function we defined in hooks.server.ts
     const session = await getSession();
 
 	return {
         // Pass session and Supabase details to the client-side layout
         session,
-		supabaseUrl: supabase_url,
-		supabaseKey: supabase_key,
+		supabaseUrl: supabaseUrl,
+		supabaseKey: supabaseKey,
 	};
 };
