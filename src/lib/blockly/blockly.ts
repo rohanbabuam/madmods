@@ -55,7 +55,7 @@ async function getAmmo() {
             // Depending on how ammo.js exports, you might need .default
             const AmmoInit = AmmoModule.default || AmmoModule;
             console.log("Initializing Ammo.js...");
-            AmmoInstance = await AmmoInit(/* Optional config object for Ammo */);
+            AmmoInstance = await AmmoInit;
             console.log("Ammo.js Initialized!");
             return AmmoInstance;
         })();

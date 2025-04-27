@@ -11,8 +11,12 @@
 
     // --- Props ---
 	// Standard way to receive props in Svelte components/layouts
-	export let data: LayoutData;
-    export let children: any; // For rendering the slot content
+	// export let data: LayoutData;
+    // export let children: any; // For rendering the slot content
+
+    // --- Props (Runes Mode) ---
+    // Access props using the $props() rune in Svelte 5 Runes mode
+	let { data, children } = $props<{ data: LayoutData; children: any }>();
 
     // --- Function to clean the URL ---
     function cleanShowLoginParam() {
