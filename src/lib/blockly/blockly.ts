@@ -387,27 +387,27 @@ function setupUI() {
   //     await run(false, physicsEnabled); // resetScene = false
   // });
 
-  // MODIFIED: Reset Button Listener
-  resetButton?.addEventListener('mouseup', async (e) => {
-      e.preventDefault();
-      console.log("reset button pressed - resetting scene and running code");
-      // Reset the scene AND run the (current) blockly code
-      await run(true, physicsEnabled); // resetScene = true
-  });
+    // MODIFIED: Reset Button Listener
+    resetButton?.addEventListener('mouseup', async (e) => {
+        e.preventDefault();
+        console.log("reset button pressed - resetting scene and running code");
+        // Reset the scene AND run the (current) blockly code
+        await run(true, physicsEnabled); // resetScene = true
+    });
 
-  // MODIFIED: Physics Button Listener
-  physicsButton?.addEventListener('mouseup', async (e) => {
-      e.preventDefault();
-      console.log("physics button pressed");
-      physicsEnabled = !physicsEnabled;
-      setPhysicsButton();
-      // Option 1: Just change state, requires Play/Reset to apply
-      // console.log("Physics state toggled. Press Play or Reset to apply.");
-      // Option 2: Reset the scene immediately with the new physics state
-      console.log("Physics state toggled. Resetting scene to apply.");
-      await run(true, physicsEnabled); // Reset scene with new physics state
-      // Choose Option 1 or 2 based on desired UX. Option 2 is simpler for the user.
-  });
+    // MODIFIED: Physics Button Listener
+    physicsButton?.addEventListener('mouseup', async (e) => {
+        e.preventDefault();
+        console.log("physics button pressed");
+        physicsEnabled = !physicsEnabled;
+        setPhysicsButton();
+        // Option 1: Just change state, requires Play/Reset to apply
+        // console.log("Physics state toggled. Press Play or Reset to apply.");
+        // Option 2: Reset the scene immediately with the new physics state
+        console.log("Physics state toggled. Resetting scene to apply.");
+        await run(true, physicsEnabled); // Reset scene with new physics state
+        // Choose Option 1 or 2 based on desired UX. Option 2 is simpler for the user.
+    });
 
      fullscreenButton?.addEventListener('mouseup', async (e) => {
          e.preventDefault();
@@ -493,6 +493,7 @@ function setupUI() {
    // Prevent clicks inside the dropdown from triggering the document listener above
    examplesDropDown?.addEventListener('click', (e) => e.stopPropagation());
    vrDropDown?.addEventListener('click', (e) => e.stopPropagation());
+
    // --- End Optional Click Outside Logic ---
 
      // Example loading
