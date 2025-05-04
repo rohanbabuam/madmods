@@ -2,119 +2,6 @@ import * as BABYLON from '@babylonjs/core/Legacy/legacy';
 import { convertToRadians } from "../utils";
 import { convertCoordsBlockToCoords, convertShapeBlockToMesh } from "../world";
 
-// Helper to safely serialize camera state
-const serializeCameraState = (camera: BABYLON.Camera | null): any | null => {
-    if (!camera || typeof camera.serialize !== 'function') {
-        return null;
-    }
-    try {
-        // Note: serialize() often returns specific properties.
-        // We might need a more robust way to capture all relevant state
-        // depending on camera type if serialize() isn't enough.
-        // For simplicity, we'll use serialize() where available and manual saving otherwise.
-
-        if (camera instanceof BABYLON.ArcRotateCamera) {
-            return {
-                type: "ArcRotate",
-                alpha: camera.alpha,
-                beta: camera.beta,
-                radius: camera.radius,
-                target: camera.target.asArray(), // Store target position
-                position: camera.position.asArray() // Store actual position just in case
-            };
-        }
-        if (camera instanceof BABYLON.UniversalCamera || camera instanceof BABYLON.FreeCamera) {
-             // serialize() might not exist or be useful for FreeCamera types
-             return {
-                 type: "Universal", // Treat FreeCamera similarly
-                 position: camera.position.asArray(),
-                 rotation: camera.rotation.asArray() // Use rotation for Universal/Free
-             };
-        }
-        if (camera instanceof BABYLON.FollowCamera) {
-            // serialize() might not exist or be useful
-            return {
-                type: "Follow",
-                position: camera.position.asArray(),
-                radius: camera.radius,
-                heightOffset: camera.heightOffset,
-                rotationOffset: camera.rotationOffset,
-                cameraAcceleration: camera.cameraAcceleration,
-                // Locked target needs to be re-established, cannot serialize directly
-            };
-        }
-        if (camera instanceof BABYLON.VRDeviceOrientationFreeCamera) {
-             // serialize() might not exist or be useful
-             return {
-                 type: "VRDeviceOrientationFreeCamera",
-                 position: camera.position.asArray(),
-                 rotation: camera.rotation.asArray() // Use rotation
-             };
-        }
-
-        // Fallback or for other camera types
-        console.warn(`serializeCameraState: Serialization not fully implemented for camera type ${camera.getClassName()}. Attempting basic position.`);
-         if (camera.position) {
-             return { type: camera.getClassName(), position: camera.position.asArray() };
-         }
-
-    } catch (e) {
-        console.error("Error serializing camera state:", e);
-    }
-    return null;
-};
-
-
-// Helper to restore camera state
-const restoreCameraState = (newCamera: BABYLON.Camera, state: any | null) => {
-    if (!state || !newCamera) return;
-
-    console.log("Attempting to restore camera state:", state);
-
-    try {
-        // Restore based on the stored type if possible
-        if (state.type === "ArcRotate" && newCamera instanceof BABYLON.ArcRotateCamera) {
-            newCamera.alpha = state.alpha;
-            newCamera.beta = state.beta;
-            newCamera.radius = state.radius;
-            // Restore target if needed, though ArcRotate often recalculates based on alpha/beta/radius
-            if (state.target) {
-                 newCamera.setTarget(BABYLON.Vector3.FromArray(state.target));
-            }
-            console.log(`Restored ArcRotate state: alpha=${state.alpha}, beta=${state.beta}, radius=${state.radius}`);
-        } else if ((state.type === "Universal" || state.type === "FreeCamera" ) && (newCamera instanceof BABYLON.UniversalCamera || newCamera instanceof BABYLON.FreeCamera)) {
-            if(state.position) newCamera.position = BABYLON.Vector3.FromArray(state.position);
-            // Rotation is often tricky, especially for FreeCamera. Might need Quaternion.
-            if(state.rotation) newCamera.rotation = BABYLON.Vector3.FromArray(state.rotation);
-             console.log(`Restored Universal/FreeCamera state: position=${state.position}, rotation=${state.rotation}`);
-        } else if (state.type === "Follow" && newCamera instanceof BABYLON.FollowCamera) {
-            if(state.position) newCamera.position = BABYLON.Vector3.FromArray(state.position);
-            if(state.radius !== undefined) newCamera.radius = state.radius;
-            if(state.heightOffset !== undefined) newCamera.heightOffset = state.heightOffset;
-            if(state.rotationOffset !== undefined) newCamera.rotationOffset = state.rotationOffset;
-            if(state.cameraAcceleration !== undefined) newCamera.cameraAcceleration = state.cameraAcceleration;
-            // Note: lockedTarget needs to be re-assigned manually later if needed
-            console.log(`Restored FollowCamera state (excluding target): radius=${state.radius}`);
-        } else if (state.type === "VRDeviceOrientationFreeCamera" && newCamera instanceof BABYLON.VRDeviceOrientationFreeCamera) {
-            if(state.position) newCamera.position = BABYLON.Vector3.FromArray(state.position);
-            if(state.rotation) newCamera.rotation = BABYLON.Vector3.FromArray(state.rotation);
-            console.log(`Restored VRDeviceOrientationFreeCamera state: position=${state.position}, rotation=${state.rotation}`);
-        }
-         // Add more types as needed
-         else {
-            // Generic fallback: try restoring position if available
-             if (state.position && newCamera.position) {
-                newCamera.position = BABYLON.Vector3.FromArray(state.position);
-                console.warn(`Restored generic position for camera type ${newCamera.getClassName()}`);
-             } else {
-                console.warn(`Could not restore state for camera type mismatch or missing data. State Type: ${state.type}, New Camera: ${newCamera.getClassName()}`);
-             }
-        }
-    } catch (e) {
-        console.error("Error restoring camera state:", e);
-    }
-};
-
 // --- MODIFIED createCamera Function ---
 const createCamera = (
     cameraType: string | null,
@@ -133,14 +20,12 @@ const createCamera = (
     }
 
     const effectiveCameraType = cameraType || "ArcRotate"; // Default if null
-    let cameraState: any = null;
     let newCamera: BABYLON.Camera; // Declare here
 
     // --- 1. Handle Existing Camera (if any) ---
     if (existingCamera) {
         console.log(`Handling existing camera (${existingCamera.name} - ${existingCamera.getClassName()})...`);
         // Serialize state BEFORE detaching/disposing
-        cameraState = serializeCameraState(existingCamera);
 
         // Detach control
         try {
@@ -185,29 +70,6 @@ const createCamera = (
                  }
                 break;
 
-            case "UniversalCamera":
-                // Often better than FreeCamera for general use
-                newCamera = new BABYLON.UniversalCamera("camera", new BABYLON.Vector3(0, 5, -15), scene);
-                // Point the camera towards the scene origin initially
-                newCamera.setTarget(BABYLON.Vector3.Zero());
-                // Add WASD/Arrow key controls
-                newCamera.keysUp.push(87);    // W
-                newCamera.keysDown.push(83);  // S
-                newCamera.keysLeft.push(65);  // A
-                newCamera.keysRight.push(68); // D
-                break;
-
-            case "FollowCamera":
-                newCamera = new BABYLON.FollowCamera("camera", new BABYLON.Vector3(0, 10, -10), scene);
-                // Default settings: Needs a target to be set later
-                newCamera.radius = 15;          // Distance from target
-                newCamera.heightOffset = 4;     // Height above target
-                newCamera.rotationOffset = 0;   // Angle around target (degrees)
-                newCamera.cameraAcceleration = 0.05; // How fast to move
-                newCamera.maxCameraSpeed = 20;     // Max speed
-                // Note: lockedTarget must be set externally via pointCameraTowards or similar
-                break;
-
             case "VRDeviceOrientationFreeCamera":
                  // IMPORTANT: Ensure VR libraries/helpers are correctly set up in your project if you use this.
                  // May require additional setup like `scene.createDefaultVRExperience()`
@@ -227,13 +89,6 @@ const createCamera = (
         console.log(`Attaching control to new camera (${newCamera.name})...`);
         newCamera.attachControl(canvas, true); // Attach to the NEW camera
         console.log("Control attached.");
-
-        // --- 4. Restore State (if available) ---
-        if (cameraState) {
-            restoreCameraState(newCamera, cameraState);
-        } else {
-             console.log("No previous camera state to restore.");
-        }
 
         return newCamera; // Return the newly created camera
 

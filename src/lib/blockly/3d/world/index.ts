@@ -934,7 +934,7 @@ const rotate = (shapeBlock: ShapeBlock, axis: string, degrees: number, scene: BA
 
 // Get the position of a shape
 const getPosition = (shapeBlock: ShapeBlock, axis: string, scene: BABYLON.Scene) => {
-  let mesh:any = convertShapeBlockToMesh(shapeBlock, scene);
+  let mesh = convertShapeBlockToMesh(shapeBlock, scene);
   if (mesh) {
     return mesh.position[axis];
   }

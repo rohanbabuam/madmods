@@ -24,7 +24,7 @@ import { setModelUrlResolver } from './3d/world/index';
 // import { initializeBlocklyInstance } from "./blocks/initializer"; // Adjusted path if needed
 
 // Import 3D engine
-import { ThreeD } from "./3d/index.ts"; // Assuming path is correcty
+import { ThreeD } from "./3d/index.ts"; // Assuming path is correct
 
 // Define the type for the resolver function for clarity
 export type ModelUrlResolver = (name: string) => string | null;

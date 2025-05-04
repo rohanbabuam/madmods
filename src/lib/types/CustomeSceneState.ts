@@ -1,12 +1,13 @@
-// src/lib/types/CustomSceneState.ts
+ // src/lib/types/CustomeSceneState.ts
 
-// Define metadata keys as constants for consistency
-export const METADATA_KEYS = {
-    BLOCKLY_ID: 'blocklyId',             // The ID of the block that created this object
+ // Define metadata keys as constants for consistency
+ export const METADATA_KEYS = {
+    BLOCKLY_ID: 'blocklyId',             // The ID of the block that created this object (if code-created)
     BLOCKLY_TYPE: 'blocklyType',         // e.g., 'box', 'sphere', 'customObject', 'ground', 'skybox'
     CREATION_PARAMS: 'blocklyCreationParams', // Params used for primitives (size, etc.)
     MATERIAL_NAME: 'blocklyMaterialName',   // Name/type of the material block used
-    SOURCE_MODEL_URL: 'blocklySourceModelUrl'  // URL for loaded meshes (.glb)
+    SOURCE_MODEL_URL: 'blocklySourceModelUrl', // URL for loaded meshes (.glb)
+    IS_MANUAL_OBJECT: 'isManualObject'      // *** ADDED: Flag (true) for objects managed manually (drag-drop, gizmo), part of the saved scene state ***
 };
 
 // Simple interfaces for Babylon object types for serialization
@@ -33,44 +34,43 @@ export interface SavedSkyboxState {
 
 export interface SavedGroundState {
     // Store parameters used to create the ground (retrieved from metadata)
-    creationParams: any; // e.g., { width: number, length: number, tileSize: number }
+    creationParams?: any; // Make optional, might not always be available/needed
     materialName: string; // Name/type of the material block used
     position: SavedVector3;
     rotationQuaternion: SavedQuaternion;
     scaling: SavedVector3; // Ground usually isn't scaled, but good practice
     isEnabled: boolean;
-    blocklyId: string; // Usually 'ground'
+    // Ground is considered manual, no blocklyId needed here in the same way
 }
 
 export interface SavedSceneObject {
-    blocklyId: string;         // Corresponds to METADATA_KEYS.BLOCKLY_ID
-    blocklyType: string;       // Corresponds to METADATA_KEYS.BLOCKLY_TYPE
-    babylonUniqueId: number;   // Babylon's internal unique ID (for debugging)
+    // blocklyId removed - manual objects might not have a direct blockly counterpart ID
+    babylonUniqueId: number;   // Babylon's internal unique ID (for debugging/identification)
     babylonClassName: string;  // e.g., "Mesh", "TransformNode"
-    name: string;              // Babylon's name (often same as blocklyId)
+    name: string;              // Babylon's name (This becomes the primary identifier for manual objects)
     position: SavedVector3;
     rotationQuaternion: SavedQuaternion;
     scaling: SavedVector3;
     isEnabled: boolean;
-    metadata: { // Store only OUR specific metadata for recreation
-        [METADATA_KEYS.BLOCKLY_ID]?: string;
-        [METADATA_KEYS.BLOCKLY_TYPE]?: string;
-        [METADATA_KEYS.CREATION_PARAMS]?: any;
-        [METADATA_KEYS.MATERIAL_NAME]?: string;
-        [METADATA_KEYS.SOURCE_MODEL_URL]?: string;
+    metadata: { // Store only OUR specific metadata needed for recreation/identification
+        // blocklyId and blocklyType removed from mandatory metadata for manual objects
+        [METADATA_KEYS.CREATION_PARAMS]?: any;        // Needed if it was a primitive modified manually
+        [METADATA_KEYS.MATERIAL_NAME]?: string;       // Material applied manually or during creation
+        [METADATA_KEYS.SOURCE_MODEL_URL]?: string;    // Crucial for drag-dropped objects
+        [METADATA_KEYS.IS_MANUAL_OBJECT]: true; // Should always be true for objects in this list
+        // blocklyId might still exist if a code-created object was *then* modified and marked manual
+        [METADATA_KEYS.BLOCKLY_TYPE]?: string;        // Original block type if it was a primitive
     };
-    // Removed sourceModelUrl and creationParams from top level, keep in metadata
 }
 
 // The main structure holding everything
 export interface CustomSceneState {
     version: number; // Start with 1, increment if structure changes
     blocklyWorkspace: object; // Blockly JSON state (output of Blockly.serialization.workspaces.save)
-    physicsEnabled: boolean;
+    physicsEnabled: boolean; // Global physics setting for the scene
     cameraState: SavedCameraState | null;
-    skyboxState: SavedSkyboxState | null;
-    groundState: SavedGroundState | null;
-    sceneObjects: SavedSceneObject[]; // List of meshes/nodes created by blocks
-    // Add ambient light intensity? Other global scene settings?
-    ambientLightIntensity?: number;
+    skyboxState: SavedSkyboxState | null; // Assumed manual/base scene element
+    groundState: SavedGroundState | null; // Assumed manual/base scene element
+    sceneObjects: SavedSceneObject[]; // List of ONLY manually managed meshes/nodes (marked with metadata)
+    ambientLightIntensity?: number; // Optional: Store ambient light setting
 }
