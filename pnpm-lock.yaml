@@ -37,6 +37,9 @@ dependencies:
   '@blockly/field-colour':
     specifier: ^5.0.12
     version: 5.0.12(blockly@11.2.2)
+  '@blockly/theme-dark':
+    specifier: ^7.0.10
+    version: 7.0.10(blockly@11.2.2)
   '@google/genai':
     specifier: ^0.7.0
     version: 0.7.0
@@ -283,6 +286,15 @@ packages:
   /@blockly/field-colour@5.0.12(blockly@11.2.2):
     resolution: {integrity: sha512-vNw6L/B0cpf+j0S6pShX31bOI16KJu+eACpsfHGOBZbb7+LT3bYKcGHe6+VRe+KtIE3jGlY7vYfnaJdOCrYlfQ==}
     engines: {node: '>=8.0.0'}
+    peerDependencies:
+      blockly: ^11.0.0
+    dependencies:
+      blockly: 11.2.2
+    dev: false
+
+  /@blockly/theme-dark@7.0.10(blockly@11.2.2):
+    resolution: {integrity: sha512-Wc6n115vt9alxzPkEwYtvBBGoPUV3gaYE00dvSKhqXTNoy1Xioujj9kT9VkGmdMO2mhgnJNczSpvxG8tcd4zLQ==}
+    engines: {node: '>=8.17.0'}
     peerDependencies:
       blockly: ^11.0.0
     dependencies:

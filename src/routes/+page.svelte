@@ -55,7 +55,9 @@ data-animstage-3="-translate-y-250 delay-400">
 
 <div id="dummy-promptbox" 
      class="fixed left-1/2 transform -translate-x-1/2 w-full max-w-md
-            aos transition-all -bottom-80 delay-200 duration-500 ease-out opacity-95"
+            aos transition-all -bottom-80 delay-200 duration-500 ease-out opacity-95
+			z-100
+			"
      data-animstage-1="bottom-36 delay-10 duration 250"
      data-animstage-3="translate-y-120">
   

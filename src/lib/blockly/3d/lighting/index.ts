@@ -23,35 +23,103 @@ const convertLightBlockToLightInScene = (lightBlock: LightBlock, scene: BABYLON.
 };
 
 // Creates a light bulb, light comes from all directions
+// --- MODIFIED createLightBulb (PointLight) ---
 const createLightBulb = (light: Light, coords: Coords, scene: BABYLON.Scene) => {
-  let lightBulb = new BABYLON.PointLight(light.id, new BABYLON.Vector3(0, 0, 0), scene);
-  lightBulb.position.x = coords.x;
-  lightBulb.position.y = coords.y;
-  lightBulb.position.z = coords.z;
-  if (light.props.b < 0) light.props.b = 0;
-  if (light.props.b > BRIGHTNESS_MAX) light.props.b = BRIGHTNESS_MAX;
-  lightBulb.intensity = light.props.b * BRIGHTNESS_MULTIPLIER;
-  lightBulb.diffuse = BABYLON.Color3.FromHexString(light.props.c);
+  let lightBulb = scene.getLightById(light.id);
+  let nodeExists = !!lightBulb;
+  let recreateNeeded = false;
+
+  if (nodeExists && lightBulb) {
+      if (!(lightBulb instanceof BABYLON.PointLight)) {
+          console.warn(`ID ${light.id} exists but is not a PointLight (LightBulb). Disposing and recreating.`);
+          lightBulb.dispose();
+          lightBulb = null;
+          nodeExists = false;
+          recreateNeeded = true;
+      } else {
+          console.log(`Updating existing LightBulb: ${light.id}`);
+          // Update position
+          lightBulb.position.set(coords.x, coords.y, coords.z);
+          // Update intensity
+          let intensity = light.props.b;
+          if (intensity < 0) intensity = 0;
+          if (intensity > BRIGHTNESS_MAX) intensity = BRIGHTNESS_MAX;
+          lightBulb.intensity = intensity * BRIGHTNESS_MULTIPLIER;
+          // Update color
+          lightBulb.diffuse = BABYLON.Color3.FromHexString(light.props.c);
+          // PointLight specific properties (if any changeable via blocks)
+          // lightBulb.shadowEnabled = ...;
+      }
+  }
+
+  if (!nodeExists || recreateNeeded) {
+      console.log(`Creating new LightBulb: ${light.id}`);
+      // Use Vector3.Zero() initially, then set position
+      lightBulb = new BABYLON.PointLight(light.id, BABYLON.Vector3.Zero(), scene);
+      lightBulb.position.set(coords.x, coords.y, coords.z);
+      let intensity = light.props.b;
+      if (intensity < 0) intensity = 0;
+      if (intensity > BRIGHTNESS_MAX) intensity = BRIGHTNESS_MAX;
+      lightBulb.intensity = intensity * BRIGHTNESS_MULTIPLIER;
+      lightBulb.diffuse = BABYLON.Color3.FromHexString(light.props.c);
+  }
 };
 
-// Creates a spotlight, light comes from a specific direction
+// --- MODIFIED createSpotlight ---
 const createSpotlight = (light: Light, coords: Coords, scene: BABYLON.Scene) => {
-  let spotlight = new BABYLON.SpotLight(
-    light.id,
-    new BABYLON.Vector3(0, 0, 0),
-    new BABYLON.Vector3(light.props.x, light.props.y, light.props.z), // direction
-    light.props.s, // beam size
-    light.props.r, // range
-    scene
-  );
-  spotlight.position.x = coords.x;
-  spotlight.position.y = coords.y;
-  spotlight.position.z = coords.z;
-  if (light.props.b < 0) light.props.b = 0;
-  if (light.props.b > 100) light.props.b = 100;
-  spotlight.intensity = light.props.b / 50;
-  spotlight.diffuse = BABYLON.Color3.FromHexString(light.props.c);
+  let spotlight = scene.getLightById(light.id);
+  let nodeExists = !!spotlight;
+  let recreateNeeded = false;
+
+  if (nodeExists && spotlight) {
+       if (!(spotlight instanceof BABYLON.SpotLight)) {
+          console.warn(`ID ${light.id} exists but is not a SpotLight. Disposing and recreating.`);
+          spotlight.dispose();
+          spotlight = null;
+          nodeExists = false;
+          recreateNeeded = true;
+      } else {
+          console.log(`Updating existing SpotLight: ${light.id}`);
+          // Update position
+          spotlight.position.set(coords.x, coords.y, coords.z);
+          // Update direction
+          spotlight.direction = new BABYLON.Vector3(light.props.x, light.props.y, light.props.z);
+          // Update angle (beam size)
+          spotlight.angle = light.props.s; // Assuming props.s is angle in radians
+          // Update exponent (range related, though SpotLight uses 'range' property)
+          spotlight.exponent = light.props.r; // Assuming props.r maps to exponent somewhat
+           // Update range if available directly (check BabylonJS SpotLight docs)
+          // spotlight.range = light.props.r;
+          // Update intensity
+          let intensity = light.props.b;
+          if (intensity < 0) intensity = 0;
+          if (intensity > 100) intensity = 100; // Spotlight intensity range might differ
+          spotlight.intensity = intensity / 50; // Original scaling
+          // Update color
+          spotlight.diffuse = BABYLON.Color3.FromHexString(light.props.c);
+      }
+  }
+
+  if (!nodeExists || recreateNeeded) {
+      console.log(`Creating new SpotLight: ${light.id}`);
+       // Use Vector3.Zero() initially, then set position
+      spotlight = new BABYLON.SpotLight(
+          light.id,
+          BABYLON.Vector3.Zero(), // Initial position
+          new BABYLON.Vector3(light.props.x, light.props.y, light.props.z), // direction
+          light.props.s, // angle (beam size)
+          light.props.r, // exponent (related to range)
+          scene
+      );
+      spotlight.position.set(coords.x, coords.y, coords.z);
+      let intensity = light.props.b;
+      if (intensity < 0) intensity = 0;
+      if (intensity > 100) intensity = 100;
+      spotlight.intensity = intensity / 50;
+      spotlight.diffuse = BABYLON.Color3.FromHexString(light.props.c);
+  }
 };
+
 
 // Creates a light
 const createLight = (lightBlock: LightBlock, coordsBlock: CoordsBlock, scene: BABYLON.Scene) => {

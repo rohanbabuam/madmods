@@ -122,6 +122,8 @@
 
 
 	// --- Header Logic ---
+    // Check if the current route ID is the home page ('/')
+	let isHomePage = $derived($page.route.id === '/');
 	let isBlocklyPage = $derived($page.route.id === '/blockly'); // Check if on blockly page
 	let headerElement: HTMLElement | null = null;
 	// Scroll logic variables (if needed later)
@@ -205,6 +207,8 @@
 						Join Waitlist
 					</button>
 				</div>
+
+                {#if !isHomePage}
                 <!-- Create Button -->
 				<a class="font-medium text-white focus:outline-hidden" href="/blockly" target="_blank" aria-current="page">
 					<button type="button" class="py-3 px-4 inline-flex items-center gap-x-2 text-sm font-medium rounded-lg border border-transparent bg-[#5500aa] opacity-100 text-white/80 hover:text-white focus:outline-hidden focus:opacity-100 disabled:opacity-50 disabled:pointer-events-none">
@@ -254,6 +258,7 @@
                         Login
                     </button>
                 {/if} <!-- End Auth Section -->
+                {/if}
 			</div>
 		</div>
 	</nav>

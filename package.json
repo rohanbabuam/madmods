@@ -67,6 +67,7 @@
 		"@babylonjs/materials": "^8.0.1",
 		"@babylonjs/post-processes": "^8.0.1",
 		"@blockly/field-colour": "^5.0.12",
+		"@blockly/theme-dark": "^7.0.10",
 		"@google/genai": "^0.7.0",
 		"@supabase/ssr": "^0.6.1",
 		"@supabase/supabase-js": "^2.49.4",
