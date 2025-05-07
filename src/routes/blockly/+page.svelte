@@ -188,6 +188,7 @@
 			Blockly.svgResize(blocklyWorkspace);
             blocklyWorkspace.render();
 		}
+		threeD?.engine?.resize();
 	}
 
 	function onColumnMouseDown(event: MouseEvent) {
