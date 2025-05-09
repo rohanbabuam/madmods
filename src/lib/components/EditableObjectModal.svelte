@@ -402,12 +402,12 @@
 				<!-- Model Viewer Container -->
 				<div class="w-full h-full relative">
 					<!-- Loading/Error Overlay -->
-					{#if isLoadingModel || modelLoadingError} 
+					{#if isLoadingModel || modelLoadingError}
 						<div class="absolute inset-0 flex flex-col items-center justify-center text-white z-20 bg-gray-900 bg-opacity-80">
 							{#if isLoadingModel}
 								<svg class="animate-spin h-8 w-8 text-white mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"> <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle> <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path> </svg>
 								<p class="text-sm">Loading 3D Model...</p>
-							{:else if modelLoadingError} 
+							{:else if modelLoadingError}
 								<p class="text-red-400 font-semibold text-sm mb-1">Error Loading Model</p>
 								<p class="mt-1 text-center text-xs max-w-xs">{modelLoadingError}</p>
 								<button	onclick={onClose} class="mt-3 rounded bg-red-600 px-3 py-1 text-xs text-white hover:bg-red-700"> Close </button>
@@ -420,7 +420,7 @@
 						bind:this={canvasElement}
 						class="absolute inset-0 h-full w-full block outline-none z-10 {isLoadingModel || modelLoadingError ? 'opacity-30' : 'opacity-100'} transition-opacity duration-300"
 						aria-label="3D Model Viewer Canvas"
-						tabindex="0" 
+						tabindex="0"
 					></canvas>
 				</div>
 			{/if}
@@ -470,7 +470,7 @@
 
 	/* Add custom background colors for tabs if needed */
 	.bg-gray-850 { background-color: #1f2937; }
-	.bg-gray-750 { background-color: #374151; } 
+	.bg-gray-750 { background-color: #374151; }
 
 
     /* Optional: Style scrollbars for better dark mode appearance */

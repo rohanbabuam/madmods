@@ -1,10 +1,8 @@
-// blockly.ts
 import introJs from "intro.js";
 import 'intro.js/introjs.css';
 import * as Blockly from 'blockly/core';
 import DarkTheme from '@blockly/theme-dark';
 
-// Import your custom block definitions FIRST (they need Blockly core)
 import * as shapes from "./blocks/shapes";
 import * as world from "./blocks/world";
 import * as materials from "./blocks/materials";
@@ -17,38 +15,32 @@ import * as camera from "./blocks/camera";
 
 import HavokPhysics from "@babylonjs/havok";
 
-// Import the function to *set* the resolver in the world module
 import { setModelUrlResolver } from './3d/world/index';
 
-// Import 3D engine
 import { ThreeD } from "./3d/index.ts";
 
-// --- IMPORT SAVE/LOAD MODULE ---
-import * as SaveLoad from '../state/saveload.ts'; // SaveLoad will now export the new functions
+import * as SaveLoad from '../state/saveload.ts';
 
-// Define the type for the resolver function for clarity
 export type ModelUrlResolver = (name: string) => string | null;
 
-// --- Module-level variables ---
 let physicsEnabled = false;
 let inspectorEnabled = false;
 let activeCamera = "ArcRotate";
 let threeD: ThreeD | null = null;
 let blocklyWorkspace: Blockly.WorkspaceSvg | null = null;
 let blocklyGenerator: any = null;
-let isAppInitialized = false; // Flag to prevent multiple initializations
+let isAppInitialized = false;
 
 
 let runCounter = 0;
 
-// --- Helper Functions (Moved or defined here) ---
 
 function getUniqueNameForField(prefix: string, block: Blockly.Block) {
     let counter = 1;
     let existingNames: string[] = [];
     if (!block.workspace) return `${prefix}_${counter}`;
 
-    var blocks = block.workspace.getBlocksByType(block.type, false); // Use false for efficiency if exact type needed
+    var blocks = block.workspace.getBlocksByType(block.type, false);
 
     for (var i = 0; i < blocks.length; i++) {
         var nameField = blocks[i].getFieldValue("NAME");
@@ -69,45 +61,45 @@ function getUniqueNameForField(prefix: string, block: Blockly.Block) {
 
 function setupEventInitializer(workspaceInstance: Blockly.WorkspaceSvg) {
     if (!workspaceInstance) return;
-  
+
     workspaceInstance.addChangeListener(async (ev: Blockly.Events.Abstract) => {
         const eventType = ev.type;
         const eventId = ev.id || ev.blockId || 'unknown';
-  
+
         if (
               ev.type === Blockly.Events.BLOCK_MOVE ||
               ev.type === Blockly.Events.BLOCK_CHANGE ||
               ev.type === Blockly.Events.BLOCK_DELETE ||
               ev.type === Blockly.Events.BLOCK_CREATE
             ) {
-  
-              // --- Animation Block Update Logic ---
-              // Use the passed workspaceInstance consistently here
+
+
+
               let eventBlockIds = ev.ids;
               if (!eventBlockIds) {
                 eventBlockIds = [ev.blockId];
               }
-              var allBlocks = workspaceInstance.getAllBlocks(true); // Use instance param
-  
+              var allBlocks = workspaceInstance.getAllBlocks(true);
+
               eventBlockIds.forEach((eventBlockId) => {
                    switch (ev.type) {
                       case Blockly.Events.BLOCK_CREATE:
-                          let newBlock = workspaceInstance.getBlockById(eventBlockId); // Use instance param
+                          let newBlock = workspaceInstance.getBlockById(eventBlockId);
                           if (newBlock?.type === "animationLoop") {
                             if (newBlock.getFieldValue("NAME") === "animation") {
-                              // Pass the block itself to getUniqueNameForField
+
                               let newUniqueName = getUniqueNameForField("animation", newBlock);
                               newBlock.setFieldValue(newUniqueName, "NAME");
                             }
-                            // Use allBlocks fetched above
+
                             allBlocks.forEach((block) => {
                               if (block.type === "animationStart" || block.type === "animationStop") {
-                                  //@ts-ignore
+
                                   if (!block.dropdownOptions) block.dropdownOptions = {};
-                                  //@ts-ignore
+
                                   block.dropdownOptions[newBlock.id] = newBlock.getFieldValue("NAME");
                                   let currentValue = block.getField("ANIMATIONS").getValue();
-                                  //@ts-ignore
+
                                   block.getField("ANIMATIONS").getOptions(false);
                                   block.getField("ANIMATIONS").setValue("none");
                                   block.getField("ANIMATIONS").setValue(currentValue);
@@ -116,36 +108,36 @@ function setupEventInitializer(workspaceInstance: Blockly.WorkspaceSvg) {
                           }
                           if (newBlock?.type === "animationStart" || newBlock?.type === "animationStop") {
                               let loops = [];
-                              //@ts-ignore
+
                               if (!newBlock.dropdownOptions) newBlock.dropdownOptions = {};
-                              // Use allBlocks fetched above
+
                               allBlocks.forEach(function (block) {
                                   if (block.type === "animationLoop") {
                                       var name = block.getField("NAME").getValue();
-                                      //@ts-ignore
+
                                       newBlock.dropdownOptions[block.id] = name;
                                       loops.push(block.id);
                                   }
                               });
                               let currentValue = newBlock.getField("ANIMATIONS").getValue();
-                              //@ts-ignore
+
                               newBlock.getField("ANIMATIONS").getOptions(false);
                               newBlock.getField("ANIMATIONS").setValue("none");
                               newBlock.getField("ANIMATIONS").setValue(currentValue);
                           }
                           break;
                       case Blockly.Events.BLOCK_CHANGE:
-                          let changedBlock = workspaceInstance.getBlockById(eventBlockId); // Use instance param
+                          let changedBlock = workspaceInstance.getBlockById(eventBlockId);
                           if (changedBlock?.type === "animationLoop") {
-                              // Use allBlocks fetched above
+
                               allBlocks.forEach((block) => {
                                   if (block.type === "animationStart" || block.type === "animationStop") {
-                                      //@ts-ignore
+
                                       if (!block.dropdownOptions) block.dropdownOptions = {};
-                                      //@ts-ignore
+
                                       block.dropdownOptions[changedBlock.id] = changedBlock.getFieldValue("NAME");
                                       let currentValue = block.getField("ANIMATIONS").getValue();
-                                      //@ts-ignore
+
                                       block.getField("ANIMATIONS").getOptions(false);
                                       block.getField("ANIMATIONS").setValue("none");
                                       block.getField("ANIMATIONS").setValue(currentValue);
@@ -154,20 +146,20 @@ function setupEventInitializer(workspaceInstance: Blockly.WorkspaceSvg) {
                           }
                           break;
                       case Blockly.Events.BLOCK_DELETE:
-                           // Use allBlocks fetched above
+
                           allBlocks.forEach((block) => {
                               if (block.type === "animationStart" || block.type === "animationStop") {
-                                  //@ts-ignore
+
                                   if (block.dropdownOptions) {
-                                      //@ts-ignore
+
                                       delete block.dropdownOptions[eventBlockId];
                                       let currentValue = block.getField("ANIMATIONS").getValue();
                                       if (currentValue === eventBlockId) {
                                           block.getField("ANIMATIONS").setValue("none");
                                       }
-                                       //@ts-ignore // Always refresh options
+
                                        block.getField("ANIMATIONS").getOptions(false);
-                                       // Set value back if it wasn't the deleted one, otherwise it stays 'none'
+
                                        if (currentValue !== eventBlockId) {
                                           block.getField("ANIMATIONS").setValue(currentValue);
                                        }
@@ -177,10 +169,10 @@ function setupEventInitializer(workspaceInstance: Blockly.WorkspaceSvg) {
                           break;
                   }
               });
-              // --- End Animation Block Update Logic ---
 
 
-           // Use the module-level blocklyWorkspace for saving
+
+
            if (blocklyWorkspace) {
             SaveLoad.saveProjectToSession(blocklyWorkspace);
         } else {
@@ -195,31 +187,30 @@ function setupEventInitializer(workspaceInstance: Blockly.WorkspaceSvg) {
 
 
 
-// --- Code Execution ---
 async function run(resetScene: boolean = false, physics: boolean = true) {
     runCounter++;
     const currentRunId = runCounter;
     console.log(`>>> RUN #${currentRunId} Start - Reset Scene: ${resetScene}, Physics: ${physics}`);
     console.time(`RunDuration_${currentRunId}`);
 
-    // --- ADD MORE SPECIFIC DEBUG ---
-    console.log(`>>> DEBUG: Inside run #${currentRunId} - Checking variables:`);
-    console.log(`>>> DEBUG: threeD instance:`, threeD); // Log the object itself
-    console.log(`>>> DEBUG: blocklyWorkspace instance:`, blocklyWorkspace); // Log the object
-    console.log(`>>> DEBUG: blocklyGenerator instance:`, blocklyGenerator); // <--- Log the object itself!
-    // --- END DEBUG ---
 
-    // Use the module-level variables directly in the check
-    if (!threeD || !blocklyWorkspace || !blocklyGenerator) { // The check remains the same
-        console.error(`>>> RUN #${currentRunId} ABORTED: 3D engine or Blockly not fully initialized. Generator is:`, blocklyGenerator); // Log value on abort
+    console.log(`>>> DEBUG: Inside run #${currentRunId} - Checking variables:`);
+    console.log(`>>> DEBUG: threeD instance:`, threeD);
+    console.log(`>>> DEBUG: blocklyWorkspace instance:`, blocklyWorkspace);
+    console.log(`>>> DEBUG: blocklyGenerator instance:`, blocklyGenerator);
+
+
+
+    if (!threeD || !blocklyWorkspace || !blocklyGenerator) {
+        console.error(`>>> RUN #${currentRunId} ABORTED: 3D engine or Blockly not fully initialized. Generator is:`, blocklyGenerator);
         console.timeEnd(`RunDuration_${currentRunId}`);
         return;
     }
-  
+
     const effectivePhysicsEnabled = physics;
-  
+
     try {
-        // Scene Reset (Conditional)
+
         if (resetScene) {
             console.log(`>>> RUN #${currentRunId}: Resetting scene requested...`);
             await threeD.createScene(true, effectivePhysicsEnabled);
@@ -228,11 +219,11 @@ async function run(resetScene: boolean = false, physics: boolean = true) {
         } else {
              console.log(`>>> RUN #${currentRunId}: Executing on existing scene.`);
         }
-  
-        // Code Generation
+
+
         let code = '';
         try {
-            // Use the module-level variables directly
+
             code = blocklyGenerator.workspaceToCode(blocklyWorkspace);
         } catch (genError) {
             console.error(`>>> RUN #${currentRunId}: Error generating code:`, genError);
@@ -240,8 +231,8 @@ async function run(resetScene: boolean = false, physics: boolean = true) {
             console.timeEnd(`RunDuration_${currentRunId}`);
             return;
         }
-  
-        // Code Execution
+
+
         const executionCode = `
             (async () => {
                 try {
@@ -254,12 +245,12 @@ async function run(resetScene: boolean = false, physics: boolean = true) {
                 }
             })();
         `;
-        // console.log(executionCode); // Keep for debugging if needed
-  
-        // Pass the module-level threeD instance
+
+
+
         const sceneFunction = new Function('threeD', executionCode);
         await sceneFunction(threeD);
-  
+
     } catch (evalError) {
         console.error(`>>> RUN #${currentRunId}: Error preparing/executing code. Name: ${evalError.name}. Message: ${evalError.message}`);
         console.error(`>>> RUN #${currentRunId}: Full Eval Error Object:`, evalError);
@@ -271,7 +262,6 @@ async function run(resetScene: boolean = false, physics: boolean = true) {
     }
   }
 
-// setPhysicsButton remains the same...
 function setPhysicsButton() {
   const physicsButton = document.getElementById("physics");
   if (!physicsButton) {
@@ -288,11 +278,10 @@ function setPhysicsButton() {
 }
 
 
-// --- UI Setup Function ---
 function setupUI() {
      console.log("Setting up UI elements and listeners...");
-     // Grab UI elements
-     const playButton = document.getElementById("play"); // Keep if you add play functionality later
+
+     const playButton = document.getElementById("play");
      const resetButton = document.getElementById("reset");
      const physicsButton = document.getElementById("physics");
      const fullscreenButton = document.getElementById("fullscreen");
@@ -308,35 +297,35 @@ function setupUI() {
      const clearButton = document.getElementById("clear");
      const exportButton = document.getElementById("export");
      const importInput = document.getElementById("import") as HTMLInputElement;
-     //const columnResizer = document.getElementById("columnResizer");
 
-     // --- Event Listeners (Some modified to use SaveLoad) ---
 
-    // Reset Button Listener (Unchanged)
+
+
+
     resetButton?.addEventListener('mouseup', async (e) => {
         e.preventDefault();
         console.log("reset button pressed - resetting scene and running code");
-        await run(true, physicsEnabled); // resetScene = true
+        await run(true, physicsEnabled);
     });
 
-    // Physics Button Listener (Unchanged functionally, uses module var)
+
     physicsButton?.addEventListener('mouseup', async (e) => {
         e.preventDefault();
         console.log("physics button pressed");
         physicsEnabled = !physicsEnabled;
         setPhysicsButton();
         console.log("Physics state toggled. Resetting scene to apply.");
-        await run(true, physicsEnabled); // Reset scene with new physics state
+        await run(true, physicsEnabled);
     });
 
-     // Fullscreen Button Listener (Unchanged)
+
      fullscreenButton?.addEventListener('mouseup', async (e) => {
          e.preventDefault();
          console.log("full screen button pressed");
          threeD?.engine?.enterFullscreen(false);
      });
 
-     // Debug Button Listener (Unchanged)
+
      debugButton?.addEventListener('mouseup', (e) => {
          e.preventDefault();
          console.log("debug button pressed");
@@ -348,28 +337,28 @@ function setupUI() {
          }
      });
 
-     // Clear Button Listener (MODIFIED - uses SaveLoad indirectly)
+
      clearButton?.addEventListener('click', async () => {
         console.log("clear session button pressed");
         if (confirm("Clearing will remove all blocks, reset the 3D scene, and clear saved static objects. Continue?")) {
-            sessionStorage.removeItem("madmodsProjectData"); // Clear saved project data
-            blocklyWorkspace?.clear(); // Clear blocks visually
-            
-            // Reset scene completely (clears 3D objects and mesh registry)
-            await run(true, physicsEnabled); // resetScene = true, this also runs empty workspace
+            sessionStorage.removeItem("madmodsProjectData");
+            blocklyWorkspace?.clear();
 
-            // Save the cleared state (empty workspace, empty scene implicitly)
+
+            await run(true, physicsEnabled);
+
+
             if (blocklyWorkspace) SaveLoad.saveProjectToSession(blocklyWorkspace);
             console.log("Workspace and scene cleared and reset.");
         }
      });
 
-    // --- Dropdown Logic (Unchanged) ---
+
     const hideAllDropDowns = () => {
       if (examplesDropDown) examplesDropDown.style.display = "none";
       if (vrDropDown) vrDropDown.style.display = "none";
    }
-   // ... (rest of dropdown event listener logic remains exactly the same) ...
+
     examplesButton?.addEventListener('click', (e) => {
         const wasVisible = examplesDropDown && getComputedStyle(examplesDropDown).display !== "none";
         hideAllDropDowns();
@@ -392,10 +381,10 @@ function setupUI() {
     });
     examplesDropDown?.addEventListener('click', (e) => e.stopPropagation());
     vrDropDown?.addEventListener('click', (e) => e.stopPropagation());
-    // --- End Dropdown Logic ---
 
 
-     // Example loading using SaveLoad
+
+
      const projects = document.getElementsByClassName("examples-dropdown-item");
      Array.from(projects).forEach((element) => {
         element.addEventListener("click", async (e) => {
@@ -403,32 +392,32 @@ function setupUI() {
             const target = e.target as Element;
             const filename = target.getAttribute("data-file");
             const physicsAttr = target.getAttribute("data-physics");
-            const filePath = `./examples/${filename}.json`; // These are assumed to be full project JSON now
+            const filePath = `./examples/${filename}.json`;
 
             if (!filename || !filePath || !blocklyWorkspace || !threeD) return;
 
             if (confirm("Loading this example will replace your current workspace and 3D scene. Continue?")) {
               try {
-                  // 1. Reset the 3D scene and clear current Blockly workspace
-                  await run(true, physicsEnabled); // true to reset scene, clears mesh registry
 
-                  // 2. Load example project (Blockly code AND static scene objects)
-                  // loadProjectFromUrl loads Blockly code into workspace and returns projectData
+                  await run(true, physicsEnabled);
+
+
+
                   const projectData = await SaveLoad.loadProjectFromUrl(blocklyWorkspace, filePath);
-                  
-                  // 3. Load static meshes from the example's scene data
+
+
                   if (projectData.scene && projectData.scene.length > 0) {
                       await threeD.loadStaticMeshes(projectData.scene);
                   }
-                  
-                  // 4. Save the newly loaded state (Blockly + current static meshes from registry) to session
+
+
                   SaveLoad.saveProjectToSession(blocklyWorkspace);
-                  
+
                   hideAllDropDowns();
                   physicsEnabled = physicsAttr === "on";
                   setPhysicsButton();
-                  
-                  // 5. Run the loaded Blockly code (false, as scene is set up with statics)
+
+
                   console.log("Example loaded. Running example's Blockly code.");
                   await run(false, physicsEnabled);
 
@@ -443,7 +432,7 @@ function setupUI() {
         });
      });
 
-     // VR Buttons (Unchanged)
+
      oculusQuestButton?.addEventListener('mouseup', async (e) => {
         e.preventDefault();
         hideAllDropDowns();
@@ -463,21 +452,21 @@ function setupUI() {
         e.preventDefault();
         hideAllDropDowns();
         console.log("exit vr button pressed");
-        activeCamera = "ArcRotate"; // Back to default
+        activeCamera = "ArcRotate";
         await run(false, physicsEnabled);
      });
 
-     // Export using SaveLoad
+
      exportButton?.addEventListener('click', () => {
         if (!blocklyWorkspace) {
            alert("Cannot export: Workspace not available.");
            return;
         }
         console.log("export project button pressed");
-        SaveLoad.saveProjectToFile(blocklyWorkspace); // Saves both Blockly and static scene
+        SaveLoad.saveProjectToFile(blocklyWorkspace);
     });
 
-    // Import using SaveLoad
+
     importInput?.addEventListener('change', (e) => {
         if (!blocklyWorkspace || !threeD) {
             alert("Cannot import: Workspace or 3D engine not available.");
@@ -495,35 +484,34 @@ function setupUI() {
 
         SaveLoad.loadProjectFromFile(blocklyWorkspace, file, async (projectData) => {
            if (projectData) {
-               // 1. Reset the 3D scene (this happens first to clear previous state)
-               //    run(true,...) also clears the blockly workspace, but loadProjectFromFile re-populates it.
-               await run(true, physicsEnabled); // Clears 3D scene & mesh registry.
 
-               // Note: loadProjectFromFile already loaded Blockly code into blocklyWorkspace.
-               
-               // 2. Load static meshes from the imported file's scene data
+
+               await run(true, physicsEnabled);
+
+
+
+
                if (projectData.scene && projectData.scene.length > 0) {
                    await threeD?.loadStaticMeshes(projectData.scene);
                }
 
-               // 3. Save the full imported state to session
-               SaveLoad.saveProjectToSession(blocklyWorkspace); // Saves Blockly code + current scene state
+
+               SaveLoad.saveProjectToSession(blocklyWorkspace);
 
                console.log("Project imported. Running imported Blockly code.");
-               // 4. Run the newly loaded Blockly code (false, as scene is set up with statics)
+
                await run(false, physicsEnabled);
            } else {
                console.log("Import process failed or was cancelled by user.");
            }
-            if (importInputElement) importInputElement.value = ''; // Reset file input
+            if (importInputElement) importInputElement.value = '';
         });
     });
 
-     // ... Help / IntroJs, Column Resizer ...
+
      console.log("UI setup complete.");
 }
 
-// createCustomBlock and createCustomBlocks remain the same...
 const createCustomBlock = (name: string, blockType: any) => {
   if (!blocklyGenerator) {
     console.error("Attempted to create custom block before JS Generator was loaded:", name);
@@ -538,7 +526,7 @@ const createCustomBlock = (name: string, blockType: any) => {
 };
 const createCustomBlocks = () => {
     console.log("Creating custom blocks...");
-    // ... (all createCustomBlock calls remain the same)
+
     createCustomBlock("skybox", world.skybox);
     createCustomBlock("setSkyColor", world.setSkyColor);
     createCustomBlock("ground", world.ground);
@@ -611,19 +599,19 @@ const createCustomBlocks = () => {
 
 async function initializeBlocklyInstance(divId: string): Promise<{ workspace: Blockly.WorkspaceSvg, generator: any }> {
     console.log("Starting Blockly instance initialization...");
-  
-    // Dispose previous workspace using the module variable
-    if (blocklyWorkspace) { // Check module variable
+
+
+    if (blocklyWorkspace) {
       try {
           console.log("Disposing previous workspace...");
-          blocklyWorkspace.dispose(); // Dispose module variable instance
-          blocklyWorkspace = null; // Clear module variable
+          blocklyWorkspace.dispose();
+          blocklyWorkspace = null;
       } catch (e) {
           console.error("Error disposing previous workspace:", e)
       }
     }
 
-  // 1. Load Messages
+
   try {
     await import('blockly/core');
     const x:any = await import('blockly/msg/en');
@@ -631,40 +619,40 @@ async function initializeBlocklyInstance(divId: string): Promise<{ workspace: Bl
     console.log("Messages loaded.");
   } catch (e) { console.error("Error loading Blockly messages:", e); throw e; }
 
-  // 2. Load Standard Blocks
+
   try {
     await import('blockly/blocks');
     console.log("Standard blocks loaded.");
   } catch (e) { console.error("Error loading Blockly standard blocks:", e); throw e; }
 
-  // 3. Load Generator and Toolbox Definition
+
   let toolboxJson: any;
-  let localGenerator: any = null; // Use a local variable first
+  let localGenerator: any = null;
   try {
     const [generatorModule, toolboxModule] = await Promise.all([
       import('blockly/javascript'),
       import('./blocks/toolbox')
     ]);
-    localGenerator = generatorModule.javascriptGenerator; // Assign to local
+    localGenerator = generatorModule.javascriptGenerator;
     toolboxJson = toolboxModule.toolbox;
     console.log("Generator and Toolbox definition loaded.");
   } catch (e) { console.error("Error loading generator or toolbox definition:", e); throw e; }
 
-   // --- IMPORTANT: Assign to module variable *here* ---
-   blocklyGenerator = localGenerator; // Assign module variable *before* creating custom blocks
-  
-  
-   // 4. Define Custom Blocks (requires generator to be loaded)
+
+   blocklyGenerator = localGenerator;
+
+
+
   try {
-    createCustomBlocks(); // Now blocklyGenerator is guaranteed to be set
+    createCustomBlocks();
 } catch (e) { console.error("Error creating custom blocks:", e); throw e; }
 
-  // 5. Define Theme
+
   let theme: Blockly.Theme | null = null;
   try {
     theme = Blockly.Theme.defineTheme("customTheme", {
       base: Blockly.Themes.Zelos, name: "customTheme",
-      componentStyles: { /* ... styles ... */
+      componentStyles: {
         workspaceBackgroundColour: "#fff",
         toolboxBackgroundColour: "#705ccc",
         toolboxForegroundColour: "#705ccc",
@@ -682,20 +670,20 @@ async function initializeBlocklyInstance(divId: string): Promise<{ workspace: Bl
     console.log('Theme defined successfully.');
   } catch (e) { console.error('Error defining theme:', e); }
 
-  // 6. Inject Workspace
+
   let injectedWorkspace: Blockly.WorkspaceSvg | null = null;
   try {
     console.log("Injecting workspace...");
     injectedWorkspace = Blockly.inject(divId, {
-        // --- ADD TOOLBOX AND THEME ---
-        toolbox: toolboxJson,      // <-- Pass the loaded toolbox definition
-        theme: DarkTheme,          // <-- Apply the imported DarkTheme
-        // --- Other common options (optional but recommended) ---
-        renderer: 'geras',         // Or 'zelos', 'thrasos'
+
+        toolbox: toolboxJson,
+        theme: DarkTheme,
+
+        renderer: 'geras',
         grid: {
             spacing: 20,
             length: 3,
-            colour: '#4A4A4A',      // Grid color for dark theme
+            colour: '#4A4A4A',
             snap: true
         },
         zoom: {
@@ -709,33 +697,32 @@ async function initializeBlocklyInstance(divId: string): Promise<{ workspace: Bl
         move: {
             scrollbars: true,
             drag: true,
-            wheel: false // Often set to false if zoom.wheel is true
+            wheel: false
         },
         trashcan: false
-        // --------------------------------
+
     });
     if (!injectedWorkspace) throw new Error("Blockly.inject returned null or undefined.");
     console.log("Workspace injected successfully with Dark Theme and Toolbox.");
   } catch (e) {
     console.error("Error injecting Blockly workspace:", e);
-    // Clear module vars on failure? Maybe not, let outer catch handle it.
-    blocklyGenerator = null; // Reset generator if inject fails?
+
+    blocklyGenerator = null;
     throw e;
   }
 
-  // Return the initialized instances
-  // Check local vars before returning
-  if (!injectedWorkspace || !localGenerator) { // Check localGenerator here
-      // If we get here, something went wrong, clear module vars maybe
+
+
+  if (!injectedWorkspace || !localGenerator) {
+
       blocklyGenerator = null;
       throw new Error("Initialization failed: Workspace or Generator is null.")
   }
-   // Return the local variables, assignment to module vars happens in init
+
   return { workspace: injectedWorkspace, generator: localGenerator };
 }
 
 
-// --- Main Application Initialization Function (MODIFIED) ---
 export async function init(blocklyDivId: string = 'blocklyDiv', canvasId: string = 'runAreaCanvas', modelUrlResolver: ModelUrlResolver) {
     if (isAppInitialized) {
         console.warn("Application already initialized.");
@@ -746,15 +733,15 @@ export async function init(blocklyDivId: string = 'blocklyDiv', canvasId: string
     let globalHavokInstance: any = null;
 
     try {
-        // --- Havok Initialization ---
+
         try {
             console.log("Initializing Havok physics engine (WASM)...");
             globalHavokInstance = await HavokPhysics();
             if (!globalHavokInstance) throw new Error("HavokPhysics() function returned null or undefined.");
             console.log("Havok WASM engine initialized successfully.");
-        } catch (havokError) { /* ... error handling ... */ return; }
+        } catch (havokError) {  return; }
 
-        // 1. Initialize 3D Engine (Assigns module 'threeD')
+
         console.log("Initializing 3D engine...");
         const canvas = document.getElementById(canvasId) as HTMLCanvasElement;
         if (!canvas) throw new Error(`Canvas element with ID "${canvasId}" not found.`);
@@ -765,7 +752,7 @@ export async function init(blocklyDivId: string = 'blocklyDiv', canvasId: string
 
         setModelUrlResolver(modelUrlResolver);
 
-        // 2. Initialize Blockly Instance
+
         console.log("Initializing Blockly instance...");
         const { workspace: ws, generator: gen } = await initializeBlocklyInstance(blocklyDivId);
         blocklyWorkspace = ws;
@@ -779,20 +766,20 @@ export async function init(blocklyDivId: string = 'blocklyDiv', canvasId: string
             setupEventInitializer(blocklyWorkspace);
         }
 
-        // 3. Create Initial 3D Scene AND Camera
-        // This is the *definitive* scene creation for the start of the application.
+
+
         console.log("Creating initial 3D scene and camera...");
-        physicsEnabled = false; // Default initial physics state
+        physicsEnabled = false;
         if (!threeD) throw new Error("3D Engine not initialized before creating scene.");
-        await threeD.createScene(true, physicsEnabled); // true = reset, clears mesh registry, creates new scene
+        await threeD.createScene(true, physicsEnabled);
         await threeD.createCamera();
         console.log("Initial 3D scene and camera created. threeD.scene should be valid now.");
-        if (!threeD.scene) { // Add a hard check
+        if (!threeD.scene) {
             console.error("CRITICAL: threeD.scene is NULL immediately after createScene/createCamera in init!");
             throw new Error("Scene creation failed to set threeD.scene in init.");
         }
 
-        // 4. Load initial project data (Blockly code + static scene objects)
+
         let loadedProjectData: SaveLoad.SavedProjectData | null = null;
         let loadedFromSessionOrUrl = false;
 
@@ -804,15 +791,15 @@ export async function init(blocklyDivId: string = 'blocklyDiv', canvasId: string
             console.log(`Loading project from URL sample: "${sampleUrl}"...`);
             const sampleFilePath = `./examples/${sampleUrl}.json`;
             try {
-                // loadWProjectFromUrl loads Blockly code & returns full project data
+
                 loadedProjectData = await SaveLoad.loadProjectFromUrl(blocklyWorkspace, sampleFilePath);
                 loadedFromSessionOrUrl = true;
-                physicsEnabled = physUrl === "1"; // Set physics based on URL param for this load
+                physicsEnabled = physUrl === "1";
                 console.log("Project loaded from URL sample.");
             } catch (sampleError) {
                 console.error(`Failed to load sample "${sampleUrl}" from URL:`, sampleError);
                 alert(`Failed to load sample "${sampleUrl}" specified in URL.`);
-                // Fallback to empty or let session/starter take over
+
                 loadedProjectData = null;
             }
         }
@@ -823,8 +810,8 @@ export async function init(blocklyDivId: string = 'blocklyDiv', canvasId: string
             if (loadedProjectData) {
                 loadedFromSessionOrUrl = true;
                 console.log("Project loaded from session storage.");
-                // Note: physicsEnabled would typically be the last active state or a default.
-                // If you need to save/restore physicsEnabled state, add it to SavedProjectData.
+
+
             }
         }
 
@@ -832,20 +819,20 @@ export async function init(blocklyDivId: string = 'blocklyDiv', canvasId: string
             console.log("Loading default starter project...");
             try {
                 loadedProjectData = await SaveLoad.loadProjectFromUrl(blocklyWorkspace, './examples/starter.json');
-                // physicsEnabled = false; // Typically starter projects might have a default physics state
+
                 console.log("Default starter project loaded.");
             } catch (starterError) {
                 console.error("Failed to load starter project:", starterError);
                 alert("Failed to load starter project. Proceeding with an empty workspace.");
-                loadedProjectData = { code: { blocks: { languageVersion: 0, blocks: [] }, variables: [] }, scene: [] }; // Empty fallback
+                loadedProjectData = { code: { blocks: { languageVersion: 0, blocks: [] }, variables: [] }, scene: [] };
             }
         }
-        
-        // 5. Setup UI Elements (should be done after workspace has initial blocks)
-        setupUI();
-        setPhysicsButton(); // Reflect current physicsEnabled state
 
-        // 6. Load Static Meshes from the loaded project data (if any) INTO THE CURRENTLY VALID SCENE
+
+        setupUI();
+        setPhysicsButton();
+
+
         if (loadedProjectData && loadedProjectData.scene && loadedProjectData.scene.length > 0 && threeD && threeD.scene) {
             console.log("Loading static meshes from project data into the scene...");
             await threeD.loadStaticMeshes(loadedProjectData.scene);
@@ -853,16 +840,16 @@ export async function init(blocklyDivId: string = 'blocklyDiv', canvasId: string
         } else {
             console.log("No static meshes to load from project data, or scene/threeD not ready for it.");
         }
-        
-        // 7. Save the fully composed initial state (Blockly + static objects in registry) to session
+
+
         if (blocklyWorkspace) {
             SaveLoad.saveProjectToSession(blocklyWorkspace);
             console.log("Initial project state saved to session.");
         }
 
-        // 8. Perform Initial Run of Blockly Code
-        // The scene (threeD.scene) is already set up (from step 3) and potentially populated with static meshes (step 6).
-        // So, run with resetScene = false.
+
+
+
         console.log("Performing initial run of Blockly code on the existing scene...");
         console.log(">>> DEBUG: Before final initial run in init(). threeD.scene is:", threeD?.scene?.uniqueId);
         if (threeD && !threeD.scene) {
@@ -875,9 +862,8 @@ export async function init(blocklyDivId: string = 'blocklyDiv', canvasId: string
     } catch (error) {
         console.error("FATAL: Application initialization failed:", error);
         isAppInitialized = false; threeD = null; blocklyWorkspace = null; blocklyGenerator = null;
-        const errorDiv:any = document.createElement('div'); /* ... error display ... */ document.body.prepend(errorDiv);
+        const errorDiv:any = document.createElement('div');  document.body.prepend(errorDiv);
     }
 }
 
-// Export necessary items (unchanged)
 export { blocklyWorkspace, blocklyGenerator, threeD, run };

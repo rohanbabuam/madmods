@@ -1,23 +1,29 @@
-// src/lib/stores/authStore.ts
-import { writable, type Writable } from 'svelte/store';
+import { writable, get, type Writable } from 'svelte/store';
 import type { Session, SupabaseClient } from '@supabase/supabase-js';
-import type { TypedSupabaseClient } from '$lib/supabaseClient'; // Adjust path if needed
+import type { TypedSupabaseClient } from '$lib/supabaseClient';
+import { browser } from '$app/environment';
+import { goto } from '$app/navigation';
 
-// Store for the Supabase client instance (initialized in layout)
 export const supabaseStore: Writable<TypedSupabaseClient | null> = writable(null);
-
-// Reactive store for the session
 export const sessionStore: Writable<Session | null> = writable(null);
 
-// Store for controlling the login modal visibility
-export const showLoginModal: Writable<boolean> = writable(false);
+interface LoginModalConfig {
+    visible: boolean;
+    intendedPath: string | null;
+    sourcePageRequiresAuth: boolean;
+}
 
-// Logout function (needs Supabase client)
+export const loginModalConfigStore: Writable<LoginModalConfig> = writable({
+    visible: false,
+    intendedPath: null,
+    sourcePageRequiresAuth: false
+});
+
 export async function handleLogout() {
     let supabase: SupabaseClient | null = null;
     const unsubscribe = supabaseStore.subscribe(client => {
         supabase = client;
-    })(); // Immediately subscribe and unsubscribe to get current value
+    })();
 
     if (!supabase) {
         console.error('Logout failed: Supabase client not available.');
@@ -25,18 +31,31 @@ export async function handleLogout() {
         return;
     }
     const { error } = await supabase.auth.signOut();
+
+    loginModalConfigStore.set({ visible: false, intendedPath: null, sourcePageRequiresAuth: false });
     if (error) {
         console.error('Error logging out:', error.message);
         alert(`Logout failed: ${error.message}`);
-    } else {
-        // Session store will update via onAuthStateChange in layout
-        console.log('Logged out successfully (triggered from store function)');
-        showLoginModal.set(false); // Ensure modal is closed if somehow open
     }
 }
 
-// Function to close the modal (can be called from anywhere)
+export function requestLogin(pathToGoToAfterLogin?: string, fromProtectedRoute: boolean = false) {
+    const currentConfig = get(loginModalConfigStore);
+
+    loginModalConfigStore.set({
+        visible: true,
+        intendedPath: pathToGoToAfterLogin || null,
+        sourcePageRequiresAuth: fromProtectedRoute
+    });
+}
+
 export function handleModalClose() {
-    console.log("Store: Closing login modal");
-    showLoginModal.set(false);
+    const previousConfig = get(loginModalConfigStore);
+    const currentSession = get(sessionStore);
+
+    loginModalConfigStore.set({ visible: false, intendedPath: null, sourcePageRequiresAuth: false });
+
+    if (previousConfig.sourcePageRequiresAuth && !currentSession && browser) {
+        goto('/', { replaceState: true });
+    }
 }
