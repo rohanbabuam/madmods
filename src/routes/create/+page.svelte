@@ -37,8 +37,7 @@
   import { WORLD_ID } from '$lib/config';
 
   // Import new saveloadService
-  import * as saveloadService from '$lib/state/saveload'; // USE THIS IMPORT
-  import type { SavedProjectData } from '$lib/state/saveload'; // USE THIS IMPORT for the type
+  import * as saveloadService from '$lib/state/saveload';
 
   let { data } = $props<{ data: PageData }>();
 
