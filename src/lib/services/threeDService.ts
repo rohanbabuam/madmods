@@ -1,4 +1,4 @@
-import { ThreeD } from '$lib/blockly/3d/index';
+import { ThreeD, type ToolName } from '$lib/blockly/3d/index';
 import { setModelUrlResolver as setWorldModelUrlResolver } from '$lib/blockly/3d/world/index';
 import HavokPhysics from '@babylonjs/havok';
 import type { GeneratedObject } from '$lib/types/GeneratedObject';
@@ -9,11 +9,19 @@ import type * as BABYLON from '@babylonjs/core/Legacy/legacy';
 import * as saveloadService from '$lib/state/saveload';
 import * as MeshRegistry from '$lib/state/meshRegistry';
 
+import { activeThreeDToolStore } from '$lib/stores/ToolStore';
+
+
 let threeDInstance: ThreeD | null = null;
 let globalHavokInstance: any = null;
 let isInitialized = false;
 
 export type ModelUrlResolver = (name: string) => string | null;
+
+function handleInternalToolChange(toolName: ToolName) {
+    console.log(`[threeDService.handleInternalToolChange] Tool changed internally to: ${toolName}`);
+    activeThreeDToolStore.set(toolName);
+}
 
 function sceneModelUrlResolver(name: string): string | null {
     const objects = objectStore.getObjects();
@@ -26,66 +34,105 @@ function sceneModelUrlResolver(name: string): string | null {
 
 export async function initializeThreeD(
     canvasId: string,
-    savedSceneData?: SaveLoad.SavedSceneObject[]
+    savedSceneData?: SaveLoad.SavedSceneObject[] // Make sure this type matches your saveload structure
 ): Promise<ThreeD> {
-    if (isInitialized && threeDInstance) {
-        console.warn("ThreeDService already initialized. Returning existing instance.");
+    console.log("[ThreeDService.initializeThreeD] Attempting initialization...");
 
-        threeDInstance.engine?.resize();
-        return threeDInstance;
+    if (isInitialized && threeDInstance) {
+        const existingScene = threeDInstance.getScene();
+        if (existingScene && !existingScene.isDisposed) {
+            console.warn("[ThreeDService.initializeThreeD] Already initialized. Resizing.");
+            threeDInstance.engine?.resize();
+            return threeDInstance;
+        } else {
+            console.warn("[ThreeDService.initializeThreeD] Re-initializing.");
+            if (threeDInstance.engine && !threeDInstance.engine.isDisposed) {
+                threeDInstance.engine.dispose();
+            }
+            threeDInstance = null;
+            isInitialized = false; // Reset this flag
+        }
     }
 
-    try {
-        console.log("Initializing Havok physics engine (WASM)...");
-        globalHavokInstance = await HavokPhysics();
-        if (!globalHavokInstance) throw new Error("HavokPhysics() function returned null or undefined.");
-        console.log("Havok WASM engine initialized successfully.");
-    } catch (havokError) {
-        console.error("Failed to initialize Havok physics:", havokError);
-        throw havokError;
+    console.log("[ThreeDService.initializeThreeD] Starting new full initialization.");
+
+    if (!globalHavokInstance) {
+        try {
+            globalHavokInstance = await HavokPhysics();
+            if (!globalHavokInstance) throw new Error("HavokPhysics() returned null/undefined.");
+        } catch (havokError) {
+            console.error("[ThreeDService.initializeThreeD] Havok init failed:", havokError);
+            throw havokError; // Re-throw to be caught by the page
+        }
     }
 
     const canvas = document.getElementById(canvasId) as HTMLCanvasElement;
     if (!canvas) {
-        throw new Error(`Canvas element with ID "${canvasId}" not found.`);
+        console.error(`[ThreeDService.initializeThreeD] Canvas "${canvasId}" not found.`);
+        throw new Error(`Canvas element with ID "${canvasId}" not found.`); // Re-throw
     }
 
-    threeDInstance = new ThreeD(canvas, globalHavokInstance);
+    console.log("[ThreeDService.initializeThreeD] Creating ThreeD instance...");
+    // The third argument is the onToolChanged callback
+    threeDInstance = new ThreeD(canvas, globalHavokInstance, handleInternalToolChange);
+    console.log("[ThreeDService.initializeThreeD] ThreeD instance created.");
+
     threeDInstance.runRenderLoop();
-
-
-    window.removeEventListener('resize', resizeEngine);
+    window.removeEventListener('resize', resizeEngine); // Ensure no duplicates
     window.addEventListener('resize', resizeEngine);
 
     setWorldModelUrlResolver(sceneModelUrlResolver);
 
+    console.log("[ThreeDService.initializeThreeD] Creating initial scene...");
+    const mainScene = await threeDInstance.createScene(true, false); // Physics off by default
 
-    await threeDInstance.createScene(true, false);
-    await threeDInstance.createCamera();
-
-    if (!threeDInstance.scene) {
-        throw new Error("Scene creation failed to set threeDInstance.scene.");
+    if (!mainScene || mainScene.isDisposed) {
+        console.error("[ThreeDService.initializeThreeD] CRITICAL: createScene() failed.");
+        throw new Error("Core scene creation failed."); // Re-throw
     }
+    const mainCamera = threeDInstance.getCamera();
+    if (!mainCamera || mainCamera.isDisposed()) {
+        console.error("[ThreeDService.initializeThreeD] CRITICAL: Camera init failed.");
+        throw new Error("Core camera creation failed."); // Re-throw
+    }
+    console.log(`[ThreeDService.initializeThreeD] Scene (ID: ${mainScene.getUniqueId()}) and Camera (Name: ${mainCamera.name}) ready.`);
 
-
-    if (savedSceneData && savedSceneData.length > 0 && threeDInstance.scene) {
-        console.log("ThreeDService: Loading static meshes from provided saved data...");
+    if (savedSceneData && savedSceneData.length > 0) {
+        console.log(`[ThreeDService.initializeThreeD] Loading ${savedSceneData.length} static meshes...`);
         await threeDInstance.loadStaticMeshes(savedSceneData);
-        console.log("ThreeDService: Static meshes loaded.");
     }
 
     isInitialized = true;
-    console.log("ThreeDService initialized successfully.");
+    console.log("[ThreeDService.initializeThreeD] Initialization successful.");
     return threeDInstance;
+}
+// Ensure cleanupThreeDService also uses property access if it checks isDisposed
+export function cleanupThreeDService() {
+    if (threeDInstance) {
+        const scene = threeDInstance.getScene();
+        if (scene && !scene.isDisposed) { // CORRECTED CHECK
+            // Scene dispose should handle camera and engine parts if ThreeD.dispose is thorough
+        }
+        threeDInstance.engine?.stopRenderLoop(); // Stop loop before disposing engine
+        threeDInstance.engine?.dispose();
+        // threeDInstance.dispose(); // If ThreeD class has its own dispose method for internal cleanup
+    }
+    MeshRegistry.clearRegistry();
+    threeDInstance = null;
+    globalHavokInstance = null;
+    isInitialized = false;
+    window.removeEventListener('resize', resizeEngine);
+    console.log("ThreeDService cleaned up.");
 }
 
 export function getThreeDInstance(): ThreeD | null {
     return threeDInstance;
 }
 
-export function setActiveTool(toolName: string): void {
+export function setActiveTool(toolName: ToolName): void { // Use ToolName type
+    console.log(`[threeDService.setActiveTool] Received toolName: ${toolName}`);
     if (threeDInstance) {
-        threeDInstance.setTool(toolName);
+        threeDInstance.setTool(toolName); // This will trigger the callback if the tool actually changes
     } else {
         console.warn("Cannot set active tool: ThreeD instance not available.");
     }
@@ -260,17 +307,4 @@ export function toggleInspector(enable?: boolean) {
 
 export function resizeEngine() {
     threeDInstance?.engine?.resize();
-}
-
-export function cleanupThreeDService() {
-    if (threeDInstance) {
-        threeDInstance.engine?.stopRenderLoop();
-        threeDInstance.engine?.dispose();
-    }
-    MeshRegistry.clearRegistry();
-    threeDInstance = null;
-    globalHavokInstance = null;
-    isInitialized = false;
-    window.removeEventListener('resize', resizeEngine);
-    console.log("ThreeDService cleaned up.");
 }

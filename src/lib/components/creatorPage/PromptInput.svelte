@@ -2,7 +2,15 @@
     import { Sparkles as Sparkles } from "lucide-svelte";
     import { createEventDispatcher } from "svelte";
 
-    export let value = ""; // Two-way bindable prompt text
+     let {
+        value = $bindable(""), // For bind:value
+        disabled = false,      // Add the disabled prop
+        onGenerate = (detail: { prompt: string }) => {} // Callback prop for generate
+    }: {
+        value?: string,
+        disabled?: boolean,
+        onGenerate?: (detail: { prompt: string }) => void
+    } = $props();
 
     const dispatch = createEventDispatcher();
 

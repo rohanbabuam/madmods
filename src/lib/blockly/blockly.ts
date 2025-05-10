@@ -251,7 +251,7 @@ async function run(resetScene: boolean = false, physics: boolean = true) {
         const sceneFunction = new Function('threeD', executionCode);
         await sceneFunction(threeD);
 
-    } catch (evalError) {
+    } catch (evalError:any) {
         console.error(`>>> RUN #${currentRunId}: Error preparing/executing code. Name: ${evalError.name}. Message: ${evalError.message}`);
         console.error(`>>> RUN #${currentRunId}: Full Eval Error Object:`, evalError);
         console.error(`>>> RUN #${currentRunId}: Eval Error Stack Trace:`, evalError.stack);
@@ -774,7 +774,7 @@ export async function init(blocklyDivId: string = 'blocklyDiv', canvasId: string
         await threeD.createScene(true, physicsEnabled);
         await threeD.createCamera();
         console.log("Initial 3D scene and camera created. threeD.scene should be valid now.");
-        if (!threeD.scene) {
+        if (!threeD.getScene()) {
             console.error("CRITICAL: threeD.scene is NULL immediately after createScene/createCamera in init!");
             throw new Error("Scene creation failed to set threeD.scene in init.");
         }
@@ -833,7 +833,7 @@ export async function init(blocklyDivId: string = 'blocklyDiv', canvasId: string
         setPhysicsButton();
 
 
-        if (loadedProjectData && loadedProjectData.scene && loadedProjectData.scene.length > 0 && threeD && threeD.scene) {
+        if (loadedProjectData && loadedProjectData.scene && loadedProjectData.scene.length > 0 && threeD && threeD.getScene()) {
             console.log("Loading static meshes from project data into the scene...");
             await threeD.loadStaticMeshes(loadedProjectData.scene);
             console.log("Static meshes loaded.");
@@ -851,8 +851,8 @@ export async function init(blocklyDivId: string = 'blocklyDiv', canvasId: string
 
 
         console.log("Performing initial run of Blockly code on the existing scene...");
-        console.log(">>> DEBUG: Before final initial run in init(). threeD.scene is:", threeD?.scene?.uniqueId);
-        if (threeD && !threeD.scene) {
+        console.log(">>> DEBUG: Before final initial run in init(). threeD.scene is:", threeD?.getScene()?.getUniqueId());
+        if (threeD && !threeD.getScene()) {
             console.error(">>> CRITICAL DEBUG: threeD.scene is NULL right before the FINAL initial run call in init!");
         }
         await run(false, physicsEnabled);

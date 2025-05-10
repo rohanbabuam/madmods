@@ -5,7 +5,7 @@
   import { browser } from '$app/environment';
 
   // Using $props for Svelte 5
-  let { projectName = "My Awesome Project" }: { projectName?: string } = $props();
+  let { projectName = $bindable("My Awesome Project") } : { projectName?: string } = $props();
   // For bind:projectName, we'd need a callback prop if parent needs to update it back
   // or use $bindable() for projectName if it's truly two-way from child.
   // For now, assuming projectName is primarily set by parent, child can modify its local copy.

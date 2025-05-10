@@ -19,6 +19,8 @@ export interface SavedProjectData {
     scene: SavedSceneObject[];
 }
 
+const SESSION_STORAGE_KEY = "madmodsProjectData";
+
 function getCurrentSceneDataForSave(): SavedSceneObject[] {
     const sceneObjects: SavedSceneObject[] = [];
     for (const mesh of MeshRegistry.getAllRegisteredMeshes()) {
@@ -69,7 +71,7 @@ export function saveProjectToSession(workspace: Blockly.WorkspaceSvg | null): vo
             code: blocklyJson, // Will be null if workspace was null
             scene: sceneJson,
         };
-        sessionStorage.setItem("madmodsProjectData", JSON.stringify(projectData));
+        sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(projectData));
         console.log("Project data saved to session storage (madmodsProjectData).");
     } catch (error) {
         console.error("Error saving project data to session storage:", error);
@@ -78,7 +80,7 @@ export function saveProjectToSession(workspace: Blockly.WorkspaceSvg | null): vo
 
 // In loadProjectFromSession function:
 export function loadProjectFromSession(workspace: Blockly.WorkspaceSvg | null): SavedProjectData | null {
-    const projectDataStr = sessionStorage.getItem("madmodsProjectData");
+    const projectDataStr = sessionStorage.getItem(SESSION_STORAGE_KEY);
     if (projectDataStr) {
         try {
             console.log("Attempting to load project data from session storage (madmodsProjectData)...");
@@ -104,7 +106,7 @@ export function loadProjectFromSession(workspace: Blockly.WorkspaceSvg | null): 
             return projectData; // projectData.code will be null if not present in storage
         } catch (e) {
             console.error("Failed to load project from session storage (madmodsProjectData, invalid JSON or load error):", e);
-            sessionStorage.removeItem("madmodsProjectData"); // Clear corrupted data
+            sessionStorage.removeItem(SESSION_STORAGE_KEY); // Clear corrupted data
             return null;
         }
     } else {
@@ -231,4 +233,9 @@ export async function loadProjectFromUrl(workspace: Blockly.WorkspaceSvg, jsonFi
         console.error(`Failed to load project from URL "${jsonFileUrl}":`, error);
         throw error;
     }
+}
+
+export function clearSessionData(): void {
+    sessionStorage.removeItem(SESSION_STORAGE_KEY);
+    console.log("Creator scene data cleared from session storage.");
 }

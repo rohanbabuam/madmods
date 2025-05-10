@@ -9,6 +9,7 @@ const DRAG_THRESHOLD_SQUARED = 25;
 export class SelectTool {
     private threeDInstance: ThreeD;
     private scene: BABYLON.Scene;
+    public camera: BABYLON.Camera;
     private utilityLayer: BABYLON.UtilityLayerRenderer;
     private boundingBoxGizmo: BABYLON.BoundingBoxGizmo | null;
     private positionGizmo: BABYLON.PositionGizmo | null;
@@ -17,18 +18,21 @@ export class SelectTool {
     private pointerObserver: BABYLON.Observer<BABYLON.PointerInfo> | null = null;
     private isPotentialDeselect: boolean = false;
     private pointerDownPosition: { x: number, y: number } | null = null; // To track drag start
+    private cameraWasDragging: boolean = false;
 
 
     constructor(
         threeD: ThreeD,
         scene: BABYLON.Scene,
+        camera: BABYLON.Camera,
         utilityLayer: BABYLON.UtilityLayerRenderer,
         boundingBoxGizmo: BABYLON.BoundingBoxGizmo | null,
         positionGizmo: BABYLON.PositionGizmo | null
     ) {
-         console.log("[SelectTool.constructor] Initializing SelectTool. Scene ID:", scene?.uniqueId);
+         console.log("[SelectTool.constructor] Initializing SelectTool. Scene ID:", scene?.getUniqueId());
         this.threeDInstance = threeD;
         this.scene = scene;
+        this.camera = camera;
         this.utilityLayer = utilityLayer;
         this.boundingBoxGizmo = boundingBoxGizmo;
         this.positionGizmo = positionGizmo;
@@ -62,195 +66,142 @@ export class SelectTool {
         }
     }
 
-  private registerPointerObserver(): void {
-    console.log("[SelectTool.registerPointerObserver] Attempting to register pointer observer. Current observer:", !!this.pointerObserver);
-        if (this.pointerObserver) {
-            console.log("[SelectTool.registerPointerObserver] Pointer observer ALREADY REGISTERED on scene:", this.scene?.uniqueId);
-            return;
-        }
-        if (!this.scene) {
-            console.error("[SelectTool.registerPointerObserver] Cannot register: Scene is null.");
-            return;
-        }
-        // Ensure the scene is the one associated with the active camera, if possible as a sanity check
-        const activeCamera = this.threeDInstance?.getCamera();
-        if (activeCamera && activeCamera.getScene() !== this.scene) {
-            console.error("[SelectTool.registerPointerObserver] Mismatch: Tool's scene and Active Camera's scene are different!",
-                          "Tool Scene ID:", this.scene.uniqueId, "Camera Scene ID:", activeCamera.getScene().uniqueId);
-            // This is a critical issue if it happens.
-        }
-
-        console.log(`[SelectTool.registerPointerObserver] REGISTERING new pointer observer on scene ID: ${this.scene.uniqueId}`);
+   private registerPointerObserver(): void {
+        if (this.pointerObserver) return;
+        // console.log(`[SelectTool.registerPointerObserver] REGISTERING new pointer observer on scene ID: ${this.scene.getUniqueId()}`);
 
         this.pointerObserver = this.scene.onPointerObservable.add((pointerInfo: BABYLON.PointerInfo) => {
-            
+            // console.log(`[SelectTool.PointerCallback] Type: ${pointerInfo.type}, Btn: ${pointerInfo.event.button}, Enabled: ${this.isEnabled}`);
+            const camera = this.threeDInstance?.getCamera();
+            if (!this.isEnabled || !camera) return;
 
             const currentAttachedMesh = this.threeDInstance.getAttachedGizmoMesh();
 
             switch (pointerInfo.type) {
                 case BABYLON.PointerEventTypes.POINTERMOVE:
-                    // Intentionally do nothing for POINTERMOVE related to selection/deselection
-                    // Gizmos handle their own hover effects and drag behaviors based on POINTERMOVE.
-                    // We don't want to log or process for selection here.
-                    if (this.isPotentialDeselect || this.pointerDownPosition) {
-                        // Check if it's a significant drag if a pointerdown started
-                        if (this.pointerDownPosition) {
-                            const dx = pointerInfo.event.clientX - this.pointerDownPosition.x;
-                            const dy = pointerInfo.event.clientY - this.pointerDownPosition.y;
-                            if ((dx * dx + dy * dy) > DRAG_THRESHOLD_SQUARED) {
-                                // console.log("[SelectTool.PointerCallback] POINTERMOVE: Significant drag detected, clearing potential deselect and selection intent.");
-                                this.isPotentialDeselect = false;
-                                this.pointerDownPosition = null; // Clear drag start, it's now a drag
-                            }
-                        } else {
-                             // this.isPotentialDeselect was true but no pointerDownPosition, indicates prior logic error, reset.
-                             this.isPotentialDeselect = false;
+                    if (this.pointerDownPosition) { // A click/drag potentially started
+                        const dx = pointerInfo.event.clientX - this.pointerDownPosition.x;
+                        const dy = pointerInfo.event.clientY - this.pointerDownPosition.y;
+                        if ((dx * dx + dy * dy) > DRAG_THRESHOLD_SQUARED) {
+                            // console.log("[SelectTool] Drag detected (camera or other).");
+                            this.isPotentialDeselect = false;
+                            this.cameraWasDragging = true; // Assume any significant drag might be camera
+                            this.pointerDownPosition = null;
                         }
                     }
                     break;
 
                 case BABYLON.PointerEventTypes.POINTERDOWN:
-                    const camera = this.threeDInstance ? this.threeDInstance.getCamera() : null;
-                        if (!this.isEnabled || !camera) {
-                            return;
-                    }
-                    // console.log(`[SelectTool.PointerCallback] POINTERDOWN. Button: ${pointerInfo.event.button}.`);
+                    // console.log(`[SelectTool] POINTERDOWN. Button: ${pointerInfo.event.button}`);
                     this.isPotentialDeselect = false;
                     this.pointerDownPosition = null;
+                    this.cameraWasDragging = false; // Reset camera drag flag on new pointer down
 
-                    if (pointerInfo.event.button !== 0) return;
+                    if (pointerInfo.event.button !== 0) return; // Only left clicks
 
-                    // Record pointer down position for drag detection
                     this.pointerDownPosition = { x: pointerInfo.event.clientX, y: pointerInfo.event.clientY };
-                    
-                    const pickResultOnDown = this.scene.pick(
-                        this.scene.pointerX, this.scene.pointerY, undefined, false, camera
-                    );
 
+                    const pickResultOnDown = this.scene.pick(this.scene.pointerX, this.scene.pointerY, undefined, false, camera);
                     let isInteractionWithGizmoOnDown = false;
-                    if (pickResultOnDown?.pickedMesh && pickResultOnDown.pickedMesh.getScene() === this.utilityLayer.utilityLayerScene) {
+                    if (pickResultOnDown?.pickedMesh && pickResultOnDown.pickedMesh.getScene() === this.threeDInstance.getUtilityLayer()?.utilityLayerScene) {
                         isInteractionWithGizmoOnDown = true;
                     } else if (this.boundingBoxGizmo?.isDragging || this.positionGizmo?.isDragging || this.boundingBoxGizmo?.isHovered || this.positionGizmo?.isHovered) {
                         isInteractionWithGizmoOnDown = true;
                     }
                     
                     if (isInteractionWithGizmoOnDown) {
-                        // console.log("[SelectTool.PointerCallback] POINTERDOWN on gizmo, allowing interaction.");
-                        return; 
+                        this.pointerDownPosition = null; // Gizmo interaction, not a scene click/drag
+                        return;
                     }
 
-                    // If it's a left click, not on a gizmo, and something is attached, it's a *potential* deselect.
-                    // The actual deselection will happen on POINTERUP (via POINTERTAP/PICK) if it wasn't a drag.
                     if (currentAttachedMesh) {
-                        if (!pickResultOnDown?.pickedMesh) { // Clicked empty space
-                            // console.log("[SelectTool.PointerCallback] POINTERDOWN on empty with left click, flagging for potential deselect.");
+                        if (!pickResultOnDown?.pickedMesh || GIZMO_IGNORE_MESH_NAMES.some(name => pickResultOnDown.pickedMesh?.name.startsWith(name))) {
                             this.isPotentialDeselect = true;
-                        } else { // Clicked on a mesh
-                            const meshName = pickResultOnDown.pickedMesh.name || '';
-                            const isIgnored = GIZMO_IGNORE_MESH_NAMES.some(ignoreName => meshName.startsWith(ignoreName));
-                            if (isIgnored) {
-                                // console.log("[SelectTool.PointerCallback] POINTERDOWN on ignored mesh with left click, flagging for potential deselect.");
-                                this.isPotentialDeselect = true;
-                            }
-                            // If it's another selectable mesh, POINTERPICK/TAP will handle the switch.
-                            // If it's a non-selectable mesh, POINTERPICK/TAP will handle deselection.
                         }
                     }
                     break;
 
-                // POINTERUP is often more reliable for completing a "click" action after a POINTERDOWN
-                // POINTERTAP and POINTERPICK are higher-level events that fire after POINTERUP
-                // if no significant move occurred.
-                case BABYLON.PointerEventTypes.POINTERUP: // Or POINTERTAP/POINTERPICK
-                    const wasDragging = !this.pointerDownPosition; // If pointerDownPosition is null here, it means POINTERMOVE cleared it due to drag
-                    this.pointerDownPosition = null; // Reset for next interaction cycle
+                case BABYLON.PointerEventTypes.POINTERUP:
+                    // console.log(`[SelectTool] POINTERUP. Button: ${pointerInfo.event.button}. PotentialDeselect: ${this.isPotentialDeselect}. CameraWasDragging: ${this.cameraWasDragging}`);
+                    
+                    const wasDraggingSceneOrCamera = !this.pointerDownPosition || this.cameraWasDragging;
+                    const wasGizmoDragging = this.boundingBoxGizmo?.isDragging || this.positionGizmo?.isDragging;
+                    
+                    // Reset flags for next cycle
+                    this.pointerDownPosition = null; 
+                    const  previousCameraDraggingState = this.cameraWasDragging; // store before reset
+                    this.cameraWasDragging = false;
 
-                    if (pointerInfo.event.button !== 0) {
+
+                    if (pointerInfo.event.button !== 0) { // Not a left click release
                         this.isPotentialDeselect = false;
                         return;
                     }
 
-                    if (wasDragging) { // If a drag was detected by POINTERMOVE clearing pointerDownPosition
-                        // console.log("[SelectTool.PointerCallback] POINTERUP after a drag, ignoring for selection/deselection.");
+                    if (wasGizmoDragging) { // If a gizmo was being interacted with, its own observable handles it.
+                        // console.log("[SelectTool] POINTERUP ignored, gizmo was dragging.");
                         this.isPotentialDeselect = false;
                         return;
                     }
                     
-                    if (this.boundingBoxGizmo?.isDragging || this.positionGizmo?.isDragging) {
+                    if (previousCameraDraggingState) { // If camera was dragging, don't interpret this UP as a select/deselect
+                        // console.log("[SelectTool] POINTERUP ignored, camera was dragging.");
                         this.isPotentialDeselect = false;
                         return;
                     }
 
-                    const pickInfo = pointerInfo.pickInfo;
-                    const pickedMesh = pickInfo?.pickedMesh;
 
+                    // If isPotentialDeselect is true, it means POINTERDOWN was on empty/ignored space,
+                    // and no significant drag (camera or otherwise) occurred.
                     if (this.isPotentialDeselect) {
-                        if (!pickedMesh || GIZMO_IGNORE_MESH_NAMES.some(ignoreName => pickedMesh.name?.startsWith(ignoreName))) {
+                        const pickInfoUp = this.scene.pick(this.scene.pointerX, this.scene.pointerY, undefined, false, camera);
+                        if (!pickInfoUp?.pickedMesh || GIZMO_IGNORE_MESH_NAMES.some(ignoreName => pickInfoUp.pickedMesh?.name?.startsWith(ignoreName))) {
+                            // console.log("[SelectTool] Confirmed deselect on empty/ignored.");
                             if (currentAttachedMesh) this.threeDInstance.detachGizmosPublic();
                         }
                         this.isPotentialDeselect = false;
                         return; 
                     }
                     
-                    // If not a confirmed deselect from empty space, proceed with normal pick logic
+                    // If it wasn't a camera drag and not a deselect intent, proceed with selection attempt
+                    const pickInfo = pointerInfo.pickInfo; // Use the pickInfo from the POINTERUP event
+                    const pickedMesh = pickInfo?.pickedMesh;
+
                     if (pickedMesh) {
                         const meshName = pickedMesh.name || '';
-                        const isGizmoElementItself = pickedMesh.getScene() === this.utilityLayer.utilityLayerScene;
+                        const isGizmoElementItself = pickedMesh.getScene() === this.threeDInstance.getUtilityLayer()?.utilityLayerScene;
 
-                        if (isGizmoElementItself) {
-                            // console.log("[SelectTool.PointerCallback] Clicked on gizmo element itself.");
-                            return; 
-                        }
-                        // Ignored meshes (ground/sky) deselection is handled by the isPotentialDeselect path above.
-                        // If somehow an ignored mesh is picked here and isPotentialDeselect was false,
-                        // it implies a drag started on the ignored mesh, which shouldn't select/deselect.
+                        if (isGizmoElementItself) return; 
                         if (GIZMO_IGNORE_MESH_NAMES.some(ignoreName => meshName.startsWith(ignoreName))) {
-                            // console.log("[SelectTool.PointerCallback] Clicked on ignored mesh, but not a deselect intent, likely drag. Detaching.");
-                            // This might still be too aggressive if a drag started on ground.
-                            // The camera controller should typically take over.
-                            // If a gizmo is attached AND we clicked ground, it should have been caught by isPotentialDeselect.
-                            // If no gizmo is attached and we click ground, do nothing.
-                            if(currentAttachedMesh) this.threeDInstance.detachGizmosPublic();
+                            if(currentAttachedMesh) this.threeDInstance.detachGizmosPublic(); // Should have been caught by isPotentialDeselect
                             return;
                         }
 
                         let meshToAttachGizmoTo: BABYLON.AbstractMesh | null = null;
+
                         const pickedMeshMetadata = MeshRegistry.getMeshMetadata(pickedMesh);
-                        if (pickedMeshMetadata) {
-                            if (pickedMeshMetadata.isAssetRoot && pickedMeshMetadata.customID) {
-                                meshToAttachGizmoTo = pickedMesh;
-                            } else if (pickedMeshMetadata.isChildOfStaticAsset && pickedMeshMetadata.rootAssetCustomID) {
-                                meshToAttachGizmoTo = MeshRegistry.getMeshByCustomID(pickedMeshMetadata.rootAssetCustomID);
-                            }
-                        }
-                        if (!meshToAttachGizmoTo && pickedMesh instanceof BABYLON.AbstractMesh) {
-                            const directMetadata = MeshRegistry.getMeshMetadata(pickedMesh);
-                            if (directMetadata && directMetadata.customID && directMetadata.meshType) { 
-                                meshToAttachGizmoTo = pickedMesh;
-                            }
+                        if (pickedMeshMetadata) { 
+                            if (pickedMeshMetadata.isAssetRoot || (pickedMeshMetadata.meshType && pickedMeshMetadata.customID) ) meshToAttachGizmoTo = pickedMesh;
+                            else if (pickedMeshMetadata.isChildOfStaticAsset && pickedMeshMetadata.rootAssetCustomID) meshToAttachGizmoTo = MeshRegistry.getMeshByCustomID(pickedMeshMetadata.rootAssetCustomID);
+                        } else if (pickedMesh instanceof BABYLON.AbstractMesh) { 
+                             const directMeta = MeshRegistry.getMeshMetadata(pickedMesh);
+                             if (directMeta && directMeta.customID && directMeta.meshType) meshToAttachGizmoTo = pickedMesh;
                         }
                         
                         if (meshToAttachGizmoTo) {
                             if (currentAttachedMesh !== meshToAttachGizmoTo) {
-                                // console.log("[SelectTool.PointerCallback] Attaching to new mesh:", meshToAttachGizmoTo.name);
+                                // console.log("[SelectTool] Attaching to new mesh:", meshToAttachGizmoTo.name);
                                 this.threeDInstance.attachGizmosPublic(meshToAttachGizmoTo);
-                            } else {
-                                // console.log("[SelectTool.PointerCallback] Clicked on already selected mesh.");
                             }
                         } else {
-                            // Clicked on a non-selectable mesh (and not an ignored one that led to deselect)
-                            // console.log("[SelectTool.PointerCallback] Clicked on non-selectable mesh, detaching.");
                             if (currentAttachedMesh) this.threeDInstance.detachGizmosPublic();
                         }
-                    } else {
-                        // This 'else' (no pickedMesh on POINTERUP/TAP/PICK) after isPotentialDeselect was false
-                        // implies a drag that ended off-screen or in a way that didn't pick anything.
-                        // Usually, no action is needed here if isPotentialDeselect handled the empty space click.
-                        // However, if a drag *started* on an object and ended in empty space,
-                        // the object should remain selected.
-                        // console.log("[SelectTool.PointerCallback] POINTERUP/TAP/PICK on empty, but not a deselect intent (drag ended in empty?). No action.");
+                    } else { 
+                        // No mesh picked on UP, and not a camera drag, and not a deselect intent
+                        // This means a click on empty space that wasn't flagged by POINTERDOWN (should be rare)
+                        if (currentAttachedMesh) this.threeDInstance.detachGizmosPublic();
                     }
-                    this.isPotentialDeselect = false; // Reset flag
+                    this.isPotentialDeselect = false; 
                     break;
             }
         });

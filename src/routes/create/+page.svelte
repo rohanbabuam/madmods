@@ -4,6 +4,9 @@
   import PromptInput from '$lib/components/creatorPage/PromptInput.svelte';
   import LibraryPanel from '$lib/components/creatorPage/LibraryPanel.svelte';
   import ToolsPanel from '$lib/components/creatorPage/ToolsPanel.svelte';
+  import type { Tool as CreatorTool } from '$lib/components/creatorPage/ToolsPanel.svelte';
+  import { activeThreeDToolStore } from '$lib/stores/toolStore'; // Import the store
+  import type { ToolName as ThreeDToolName } from '$lib/blockly/3d'; // Actual tool type from engine
 
   import { sessionStore, loginModalConfigStore, requestLogin, supabaseStore, handleLogout } from '$lib/stores/authStore';
   import { goto } from '$app/navigation';
@@ -42,7 +45,7 @@
   // Original state variables
   let currentProjectName = $state("Dino Park");
   let currentPromptText = $state("");
-  let currentActiveTool: string | null = $state('select');
+  let currentActiveTool = $derived($activeThreeDToolStore as CreatorTool | null);
 
   // Auth state
   let user = $derived($sessionStore?.user);
@@ -92,6 +95,30 @@
     }
   });
   // --- End Authentication Effects ---
+
+   async function handleToolSelectionFromPanel(selectedToolKey: CreatorTool) { // Use string here for now, or Tool type
+    console.log(`[+page.svelte handleToolSelectionFromPanel] UI selected tool: ${selectedToolKey}`);
+
+    // Update the active tool state here
+    currentActiveTool = selectedToolKey; // This will re-render ToolsPanel with the correct active button
+
+    setActiveTool(selectedToolKey as ThreeDToolName); // This calls the service to enable/disable the actual tool logic
+
+    // Handle other tool-specific UI logic if needed (e.g., inspector toggle)
+    const threeD = getThreeDInstance();
+    if (!threeD) return;
+
+    // switch (selectedToolKey) {
+    //     case 'inspector-toggle':
+    //         toggleInspector();
+    //         break;
+    //     case 'physics-toggle':
+    //         currentPhysicsState = !currentPhysicsState;
+    //         await togglePhysicsInScene(currentPhysicsState);
+    //         break;
+    //     // 'select' and 'clone' tool activation is handled by setActiveTool directly.
+    // }
+  }
 
 
   async function handlePromptGenerate(event: CustomEvent<{ prompt: string }>) {
@@ -153,34 +180,7 @@
     }
   }
 
-async function handleToolSelection(event: CustomEvent<string>) {
-    const selectedToolKey = event.detail; // e.g., 'select', 'wand'
-
-    // Inform the threeDService/ThreeD instance about the tool change
-    setActiveTool(selectedToolKey);
-
-    // Handle other tool-specific UI logic if needed (e.g., inspector toggle)
-    const threeD = getThreeDInstance();
-    if (!threeD) return;
-
-    switch (selectedToolKey) {
-        // Cases for tools that are not 'select' but might have immediate UI effects
-        case 'inspector-toggle':
-            toggleInspector();
-            // Update currentActiveTool for ToolsPanel to reflect toggle state
-            // This assumes ToolsPanel has buttons like 'inspector-on'/'inspector-off'
-            // or you manage this visual state differently.
-            // For simplicity, let's assume ToolsPanel's bind:activeTool handles this.
-            break;
-        case 'physics-toggle':
-            currentPhysicsState = !currentPhysicsState;
-            await togglePhysicsInScene(currentPhysicsState);
-            break;
-        // 'select' tool activation is handled by setActiveTool directly.
-    }
-  }
-
-	function handleCanvasDragOver(event: DragEvent) {
+  function handleCanvasDragOver(event: DragEvent) {
 		event.preventDefault();
 		if (event.dataTransfer) {
 			if (event.dataTransfer.types.includes('application/madmods-object+json')) {
@@ -191,11 +191,12 @@ async function handleToolSelection(event: CustomEvent<string>) {
 			}
 		}
 	}
-    function handleCanvasDragLeave(event: DragEvent) {
-        if (event.relatedTarget === null || !(event.currentTarget as HTMLElement).contains(event.relatedTarget as Node)) {
-            threeDCanvasElement?.classList.remove('dragging-over');
-        }
-    }
+
+  function handleCanvasDragLeave(event: DragEvent) {
+      if (event.relatedTarget === null || !(event.currentTarget as HTMLElement).contains(event.relatedTarget as Node)) {
+          threeDCanvasElement?.classList.remove('dragging-over');
+      }
+  }
 
 	async function handleCanvasDrop(event: DragEvent) {
 		event.preventDefault();
@@ -232,33 +233,51 @@ async function handleToolSelection(event: CustomEvent<string>) {
   });
 
   // Effect for 3D initialization, depends on user being logged in
- $effect(() => {
+  $effect(() => {
     async function init3D() {
-        if (browser && user && !isThreeDInitialized && !isInitializingThreeD) {
-            isInitializingThreeD = true;
-            try {
-                await initializeThreeD('threeDViewportCanvas');
-                isThreeDInitialized = true;
-                setActiveTool('select');
-                // Load project data (which includes scene and potentially null code)
-                const projectSessionData: SavedProjectData | null = saveloadService.loadProjectFromSession(null); // Pass null for workspace
+      if (browser && user && !isThreeDInitialized && !isInitializingThreeD) {
+        console.log("[+page.svelte $effect init3D] Starting 3D initialization process...");
+        isInitializingThreeD = true;
+        try {
+          // 1. Initialize the basic 3D scene and engine
+          await initializeThreeD('threeDViewportCanvas');
+          isThreeDInitialized = true;
+          console.log("[+page.svelte $effect init3D] 3D engine initialized. Setting initial tool.");
+          setActiveTool('select'); // This will also update the activeThreeDToolStore
 
-                if (projectSessionData && projectSessionData.scene && projectSessionData.scene.length > 0) {
-                    console.log(`Found ${projectSessionData.scene.length} objects in session to load onto /create page.`);
-                    // Pass the scene array to the corrected threeDService function
-                    await loadStaticMeshesFromSessionData(projectSessionData.scene);
-                    console.log("Finished attempting to load static meshes from session onto /create page.");
-                } else {
-                    console.log("No scene data found in session for /create page, or scene is empty.");
-                }
+          // 2. Attempt to load project data from session storage
+          console.log("[+page.svelte $effect init3D] Attempting to load project data from session storage (key: madmodsProjectData)...");
+          const projectSessionData = saveloadService.loadProjectFromSession(null); // Pass null for Blockly workspace
 
-            } catch (error: any) {
-                console.error("Failed to initialize 3D viewport or load session data for /create page:", error);
-                alert(`Error initializing 3D view or loading session on /create page: ${error.message || String(error)}`);
-            } finally {
-                isInitializingThreeD = false;
+          if (projectSessionData) {
+            console.log("[+page.svelte $effect init3D] Successfully retrieved projectSessionData object.");
+            if (projectSessionData.scene && projectSessionData.scene.length > 0) {
+              console.log(`[+page.svelte $effect init3D] Found ${projectSessionData.scene.length} static objects in session. Loading them into the scene...`);
+              await loadStaticMeshesFromSessionData(projectSessionData.scene);
+              console.log("[+page.svelte $effect init3D] Finished loading static meshes from session.");
+            } else {
+              console.log("[+page.svelte $effect init3D] No static scene objects found in session data (scene array is empty or missing).");
             }
+            // Here you would also load Blockly data if projectSessionData.code exists and workspace is available
+            // if (projectSessionData.code && get(blocklyWorkspaceStore)) { /* Load Blockly blocks */ }
+          } else {
+            console.log("[+page.svelte $effect init3D] No project data found in session storage by saveloadService, or data was invalid.");
+          }
+
+        } catch (error: any) {
+          console.error(
+            "ERROR during 3D initialization or session loading on /create page:",
+            error.message || String(error),
+            error
+          );
+        } finally {
+          isInitializingThreeD = false;
+          console.log("[+page.svelte $effect init3D] Finished 3D initialization and loading attempt.");
         }
+      } else {
+        // Optional log for why init isn't running
+        // console.log(`[+page.svelte $effect init3D] Skipping 3D initialization. Conditions: browser=${browser}, user=${!!user}, !isThreeDInitialized=${!isThreeDInitialized}, !isInitializingThreeD=${!isInitializingThreeD}`);
+      }
     }
     init3D();
   });
@@ -285,15 +304,26 @@ async function handleToolSelection(event: CustomEvent<string>) {
       />
     </div>
 
-    <ToolsPanel bind:activeTool={currentActiveTool} on:selectTool={handleToolSelection} />
+    <ToolsPanel
+      activeTool={currentActiveTool}
+      onToolSelect={handleToolSelectionFromPanel}
+    />
+
     <LibraryPanel />
-    <PromptInput bind:value={currentPromptText} on:generate={handlePromptGenerate} disabled={!isThreeDInitialized || isLoadingClientAuth || !user} />
+    <PromptInput
+      bind:value={currentPromptText}
+      on:generate={handlePromptGenerate}
+      disabled={!isThreeDInitialized || isLoadingClientAuth || !user}
+    />
 
     <div
         class="absolute inset-0 w-full h-full z-0"
         ondragover={handleCanvasDragOver}
         ondrop={handleCanvasDrop}
         ondragleave={handleCanvasDragLeave}
+        role="region"
+        aria-label="3D Viewport and Object Drop Zone"
+        aria-describedby={isInitializingThreeD && !isThreeDInitialized ? "loading-message" : undefined}
     >
         {#if isInitializingThreeD && !isThreeDInitialized}
             <div class="absolute inset-0 flex items-center justify-center bg-gray-800 z-10">
