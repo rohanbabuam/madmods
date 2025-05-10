@@ -9,7 +9,7 @@ import type * as BABYLON from '@babylonjs/core/Legacy/legacy';
 import * as saveloadService from '$lib/state/saveload';
 import * as MeshRegistry from '$lib/state/meshRegistry';
 
-import { activeThreeDToolStore } from '$lib/stores/ToolStore';
+import { activeThreeDToolStore } from '$lib/stores/toolStore';
 
 
 let threeDInstance: ThreeD | null = null;
